@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from 'react'
 
-export type Ruta = 'panel' | 'ajustes' | 'entrar' | 'crear'
+export type Ruta = 'panel' | 'ajustes' | 'entrar' | 'crear' | 'privacidad'
 
 // Cada ruta ↔ su hash en la URL (como un @RequestMapping, pero en el navegador)
-const HASH: Record<Ruta, string> = { panel: '/', ajustes: '/ajustes', entrar: '/entrar', crear: '/crear' }
+const HASH: Record<Ruta, string> = { panel: '/', ajustes: '/ajustes', entrar: '/entrar', crear: '/crear', privacidad: '/privacidad' }
 
 const suscribir = (avisar: () => void) => {
   window.addEventListener('hashchange', avisar)

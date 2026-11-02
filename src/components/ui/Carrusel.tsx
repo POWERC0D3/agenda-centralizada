@@ -30,7 +30,10 @@ export function Carrusel<T extends string>({ etiqueta, opciones, valor, onCambio
   const agarre = useRef<{ x: number; id: number } | null>(null)
   const i = opciones.indexOf(valor)
 
+  const unica = opciones.length < 2 // una sola opción posible (p. ej. DAM 1º solo tiene grupo B): nada que mover
+
   const mover = (d: 1 | -1) => {
+    if (unica) return
     const siguiente = (i + d + opciones.length) % opciones.length
     // Canica: más aguda cuanto más avanzada la opción, así "oyes" en qué posición estás
     const r = raiz.current?.getBoundingClientRect()
@@ -87,13 +90,14 @@ export function Carrusel<T extends string>({ etiqueta, opciones, valor, onCambio
     animate(arrastre, 0, { type: 'spring', stiffness: 500, damping: 30 }) // vuelve a su sitio con un muelle
   }
 
-  const flecha = 'grid size-6 place-items-center text-tinta-suave transition-colors hover:text-arena sm:size-7'
+  const flecha =
+    'grid size-6 place-items-center text-tinta-suave transition-colors hover:text-arena disabled:pointer-events-none disabled:opacity-20 sm:size-7'
 
   return (
     <div ref={raiz} role="group" aria-label={etiqueta} className="flex flex-col items-center gap-2">
       <span className="text-[0.65rem] tracking-widest text-tinta-suave uppercase">{etiqueta}</span>
       <div className="flex items-center sm:gap-1">
-        <button type="button" className={flecha} onClick={() => mover(-1)} aria-label={`${etiqueta}: anterior`}>
+        <button type="button" disabled={unica} className={flecha} onClick={() => mover(-1)} aria-label={`${etiqueta}: anterior`}>
           ‹
         </button>
         <div
@@ -130,7 +134,7 @@ export function Carrusel<T extends string>({ etiqueta, opciones, valor, onCambio
             </AnimatePresence>
           </motion.div>
         </div>
-        <button type="button" className={flecha} onClick={() => mover(1)} aria-label={`${etiqueta}: siguiente`}>
+        <button type="button" disabled={unica} className={flecha} onClick={() => mover(1)} aria-label={`${etiqueta}: siguiente`}>
           ›
         </button>
       </div>

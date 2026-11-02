@@ -420,3 +420,14 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Las dos funciones de Moodle comprueban ellas mismas quién llama (quienLlama en _shared/http.ts → 401 sin sesión):
+# no hace falta la comprobación automática del JWT, que con las claves nuevas (sb_publishable_…) puede fallar
+[functions.conectar-moodle]
+verify_jwt = false
+
+[functions.sincronizar]
+verify_jwt = false
+
+[functions.borrar-cuenta]
+verify_jwt = false

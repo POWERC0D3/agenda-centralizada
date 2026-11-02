@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CICLOS, CURSOS, GRUPO_INICIAL, LETRAS, type Grupo } from '../lib/grupos'
+import { ajustarGrupo, CICLOS, CURSOS, GRUPO_INICIAL, LETRAS, type Grupo } from '../lib/grupos'
 
 const CLAVE = 'agenda:grupo'
 
@@ -9,7 +9,8 @@ function leer(): Grupo {
     const g = JSON.parse(localStorage.getItem(CLAVE) ?? 'null') as Partial<Grupo> | null
     const valido =
       g && CICLOS.some((c) => c === g.ciclo) && CURSOS.some((c) => c === g.curso) && LETRAS.some((l) => l === g.letra)
-    return valido ? (g as Grupo) : GRUPO_INICIAL
+    // Además tiene que existir en el centro (p. ej. un "DAM 1º A" guardado antes → DAM 1º B)
+    return valido ? ajustarGrupo(g as Grupo) : GRUPO_INICIAL
   } catch {
     return GRUPO_INICIAL
   }

@@ -64,6 +64,8 @@ function guardarConfig(nueva: Config) {
 
 export const activarSonido = (activo: boolean) => guardarConfig({ ...config, activo })
 export const cambiarVolumen = (volumen: number) => guardarConfig({ ...config, volumen })
+/** Las dos a la vez (al traer los ajustes de la cuenta o al cerrar sesión). */
+export const fijarConfigSonido = (nueva: Config) => guardarConfig({ activo: nueva.activo, volumen: nueva.volumen })
 
 // ── Motor ─────────────────────────────────────────────────────────────
 let ctx: AudioContext | null = null

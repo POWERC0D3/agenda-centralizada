@@ -32,7 +32,7 @@ const PASOS: Paso[] = [
   {
     marca: 'logo',
     titulo: 'El logo es el menú',
-    texto: 'Tejado: alvaro.cloud. Puerta central: login. Puerta derecha: ajustes. Puerta izquierda: la web del instituto.',
+    texto: 'Tejado: alvaro.cloud. Puerta central: tu cuenta. Puerta derecha: ajustes. Puerta izquierda: la web del instituto.',
   },
   {
     marca: 'cabecera',

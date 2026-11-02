@@ -31,3 +31,11 @@ export function useSesion() {
 }
 
 export const cerrarSesion = () => supabase.auth.signOut()
+
+/** Borra la cuenta y todos sus datos (Edge Function borrar-cuenta) y cierra la sesión. */
+export async function borrarCuenta(): Promise<void> {
+  const { error } = await supabase.functions.invoke('borrar-cuenta', { body: {} })
+  if (error) throw new Error('No se pudo borrar la cuenta. Inténtalo más tarde')
+  // scope local: el usuario ya no existe en el servidor; basta con olvidar la sesión en este navegador
+  await supabase.auth.signOut({ scope: 'local' })
+}

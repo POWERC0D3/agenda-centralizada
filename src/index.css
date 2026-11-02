@@ -69,6 +69,21 @@
   /* Pizarra: sector productivo */
   --color-asig-dasp: #d6dce8;
   --color-asig-sasp: #aab4c7;
+
+  /* 2º curso: nunca coinciden en pantalla con los de 1º (cada alumno ve solo su curso), así que
+     se reutilizan las mismas 5 familias. Azul: código; cian: datos/servidor; violeta: interfaces;
+     rosa: transversales; pizarra: despliegue y empresa */
+  --color-asig-dwec: #a6bdff;
+  --color-asig-dwes: #8fdfe6;
+  --color-asig-desaw: #aab4c7;
+  --color-asig-diw: #c6b2ff;
+  --color-asig-ipeii: #f0b6c4;
+  --color-asig-ad: #8fdfe6;
+  --color-asig-di: #c6b2ff;
+  --color-asig-pmdm: #a6bdff;
+  --color-asig-psp: #92c6f6;
+  --color-asig-sge: #d6dce8;
+  --color-asig-pidm: #ddb4f3;
 }
 
 /* Tinte verde del logo que entra desde la izquierda (Horario y Calendario): el mismo recurso que el

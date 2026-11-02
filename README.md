@@ -30,6 +30,8 @@ Un panel de control para el alumnado que junta en **una sola pantalla** el horar
 ## Qué hace
 
 ### Panel principal (`#/`)
+Solo con sesión iniciada: sin ella, la web te lleva al login.
+
 En escritorio el panel ocupa **exactamente la pantalla, sin scroll**. En móvil las celdas se apilan una debajo de otra. Se reparte en cinco celdas:
 
 | Celda | Qué muestra |
@@ -42,7 +44,8 @@ En escritorio el panel ocupa **exactamente la pantalla, sin scroll**. En móvil 
 
 ### Ajustes (`#/ajustes`)
 - **Tu cuenta:** con quién has iniciado sesión y "Cerrar sesión" (o "Iniciar sesión" si no hay sesión).
-- **Tu grupo:** ciclo (DAW / DAM), curso (1º / 2º) y grupo (A / B) con carruseles. De momento solo hay datos de **DAW 1º A**.
+- **Tu grupo:** ciclo, curso y grupo con carruseles. Solo se pueden elegir los grupos que existen en el centro: **DAW 1º A y B, DAM 1º B, DAW 2º A y DAM 2º B** (A = mañana, B = tarde). Cada uno tiene sus módulos (en 2º, los del Real Decreto 405/2023 más Itinerario II y Proyecto). De momento solo hay horario y exámenes de **DAW 1º A**.
+- **Se guarda en tu cuenta:** con sesión iniciada, el grupo, los módulos y el sonido se sincronizan entre dispositivos (tabla `perfiles`).
 - **Tus módulos:** marcar los módulos que no cursas (convalidados). Se guardan en el navegador y desaparecen de toda la web.
 - **Sonido:** activar o silenciar y volumen.
 - **Sincronizar:** botones de muestra para la futura sincronización con Microsoft 365.
@@ -205,7 +208,9 @@ Para añadir otro grupo: crear `src/data/grupos/<grupo>/` con su `horario.json` 
 Es una **versión 1** con un backend recién estrenado. Lo que conviene saber:
 
 - **Solo hay datos de DAW 1º A.** Los demás grupos muestran un aviso de "sin datos".
-- **Las cuentas son reales, pero el panel aún no depende de ellas:** sigue mostrando el horario y los exámenes del JSON. Las tareas propias y las de Moodle llegarán en los siguientes pasos.
+- **Moodle del centro conectado:** desde Ajustes → Sincronizar, las entregas pendientes de aula.iesmontenaranco.com aparecen en la Agenda y el Calendario (de momento con el botón "Sincronizar ahora"; la sincronización automática llegará después). Mis Aulas y las tareas de Teams a mano, más adelante.
+- **Todo en la cuenta:** ajustes, tareas hechas y entregas se sincronizan entre dispositivos. Se puede **borrar la cuenta** con todos sus datos desde Ajustes.
+- **Política de privacidad** publicada en `#/privacidad` (ver [docs/PRIVACIDAD.md](docs/PRIVACIDAD.md)).
 - **Datos de prueba:** `examenes.json` incluye entregas **inventadas** (5, 6, 9, 10, 12, 17 y 25 de noviembre; 1 y 3 de diciembre) para probar la Agenda. Hay que quitarlas cuando lleguen las fechas reales.
 - **Sin sonido hasta el primer clic:** es la política de autoplay de los navegadores; el audio arranca con el primer clic o tecla.
 - **Pendiente conocido:** los módulos apagados se guardan con una clave común a todos los grupos.
@@ -244,6 +249,7 @@ Pendiente, en este orden:
 
 - **[docs/PROCESO.md](docs/PROCESO.md):** cómo se hizo, paso a paso: las fases, las decisiones de diseño, los mayores retos técnicos y lo aprendido.
 - **[docs/BACKEND.md](docs/BACKEND.md):** el backend con Supabase: por qué, cómo se montó, la tabla `entregas`, la seguridad (claves, permisos, RLS), el login y las pruebas.
+- **[docs/PRIVACIDAD.md](docs/PRIVACIDAD.md):** la política de privacidad (la misma que la página `#/privacidad`).
 - **[docs/INTEGRACIONES.md](docs/INTEGRACIONES.md):** la investigación para leer las entregas de Moodle y Teams, cómo se llegó a cada conclusión y el plan.
 - **[docs/ARQUITECTURA.md](docs/ARQUITECTURA.md):** cómo está hecho por dentro: flujo de datos, cada módulo y cada técnica (z-buffer, shaders, dithering, ScrollTrigger, Web Audio…).
 

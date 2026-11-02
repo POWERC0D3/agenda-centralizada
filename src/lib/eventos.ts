@@ -11,7 +11,9 @@ export function eventosConDias(eventos: Evento[], ahora: Date): EventoConDias[] 
   return eventos
     .map((e, i) => {
       const dia = parseFecha(e.fecha)
-      return { ...e, id: `${e.fecha}-${e.asignatura ?? 'gen'}-${i}`, dia, dias: diasEntre(ahora, dia) }
+      // Los del JSON no traen id: se calcula. Los de la cuenta traen el suyo, que no cambia aunque
+      // lleguen o se vayan otras entregas (de él depende recordar qué tareas marcaste como hechas)
+      return { ...e, id: e.id ?? `${e.fecha}-${e.asignatura ?? 'gen'}-${i}`, dia, dias: diasEntre(ahora, dia) }
     })
     .sort((a, b) => a.dia.getTime() - b.dia.getTime())
 }

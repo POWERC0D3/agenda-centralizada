@@ -1,5 +1,4 @@
 import type { Clase, Horario } from '../types'
-import { asignaturas } from './datos'
 import { horaAMinutos } from './fechas'
 
 /** Asignaturas que el usuario ha "apagado" porque no las cursa. */
@@ -22,10 +21,4 @@ export function franjas(horario: Horario): string[] {
     horas.add(c.fin)
   }
   return [...horas].sort((a, b) => horaAMinutos(a) - horaAMinutos(b))
-}
-
-/** Los módulos que aparecen en un horario, en el orden del catálogo de asignaturas. */
-export function modulosDe(horario: Horario): string[] {
-  const enHorario = new Set(horario.clases.map((c) => c.asignatura))
-  return asignaturas.map((a) => a.id).filter((id) => enHorario.has(id))
 }

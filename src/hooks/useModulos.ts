@@ -57,5 +57,8 @@ export function useModulos() {
 
   const restablecer = () => setPermanentes(new Set())
 
-  return { excluidos, permanentes, alternarTemporal, alternarPermanente, restablecer }
+  // Sustituye la lista entera (al traer los ajustes de la cuenta desde otro dispositivo)
+  const establecerPermanentes = (ids: readonly string[]) => setPermanentes(new Set(ids))
+
+  return { excluidos, permanentes, alternarTemporal, alternarPermanente, restablecer, establecerPermanentes }
 }

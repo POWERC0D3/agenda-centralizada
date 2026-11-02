@@ -187,6 +187,15 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
             >
               {enviando ? (crear ? 'Creando cuenta…' : 'Entrando…') : crear ? 'Crear cuenta' : 'Entrar'}
             </button>
+            {crear && (
+              <p className="text-center text-xs leading-relaxed text-tinta-suave">
+                Al crear la cuenta aceptas la{' '}
+                <a href="#/privacidad" className="text-tinta underline underline-offset-4 hover:text-arena">
+                  política de privacidad
+                </a>
+                .
+              </p>
+            )}
           </form>
         </>
       )}

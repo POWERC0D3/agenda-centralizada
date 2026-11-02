@@ -1,0 +1,179 @@
+import { useEffect, useState, type FormEvent } from 'react'
+import { conectarMoodle, desconectarMoodle, misConexiones, sincronizarAhora, type ConexionMoodle as Conexion } from '../../lib/moodle'
+import { sonar } from '../../lib/sonido'
+
+type Props = {
+  haySesion: boolean
+  avisar: (texto: string) => void
+  /** Se ha usado (conectar, sincronizar…): en la configuración guiada, enseña la siguiente sección */
+  onUsar: () => void
+}
+
+/** "hace 5 min", "hace 2 h", "hace 3 días" */
+function hace(iso: string): string {
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000))
+  if (min < 1) return 'ahora mismo'
+  if (min < 60) return `hace ${min} min`
+  if (min < 60 * 24) return `hace ${Math.round(min / 60)} h`
+  return `hace ${Math.round(min / 1440)} días`
+}
+
+const campo = 'w-full border border-linea bg-fondo px-3 py-2 text-sm outline-none transition-colors focus:border-arena'
+const boton = 'border border-linea px-3.5 py-1.5 text-sm transition-colors disabled:cursor-wait disabled:opacity-50'
+
+/**
+ * La conexión con el Moodle del centro (aula.iesmontenaranco.com).
+ * La contraseña solo viaja a la Edge Function, que pide a Moodle un acceso (token) y la olvida.
+ */
+export function ConexionMoodle({ haySesion, avisar, onUsar }: Props) {
+  const [conexion, setConexion] = useState<Conexion | null | undefined>(undefined) // undefined = cargando
+  const [formulario, setFormulario] = useState(false)
+  const [ocupado, setOcupado] = useState<null | 'conectar' | 'sincronizar' | 'desconectar'>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const leer = () =>
+    misConexiones()
+      .then((cs) => setConexion(cs.find((c) => c.sitio === 'centro') ?? null))
+      .catch(() => setConexion(null))
+
+  useEffect(() => {
+    if (haySesion) void leer()
+  }, [haySesion])
+
+  const conectar = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const datos = new FormData(e.currentTarget)
+    setOcupado('conectar')
+    setError(null)
+    onUsar()
+    try {
+      const r = await conectarMoodle(String(datos.get('usuario')).trim(), String(datos.get('clave')))
+      sonar('toggle_on')
+      avisar(r.pendientes ? `Conectado: ${r.pendientes} entregas pendientes` : 'Conectado: no tienes entregas pendientes')
+      setFormulario(false)
+      await leer()
+    } catch (err) {
+      sonar('caution', { volumen: 0.5 })
+      setError(err instanceof Error ? err.message : 'No se pudo conectar')
+    } finally {
+      setOcupado(null)
+    }
+  }
+
+  const sincronizar = async () => {
+    setOcupado('sincronizar')
+    onUsar()
+    try {
+      const r = await sincronizarAhora()
+      avisar(r.fallos ? 'No se pudo sincronizar: mira el aviso de la conexión' : `Sincronizado: ${r.pendientes} entregas pendientes`)
+    } catch (err) {
+      avisar(err instanceof Error ? err.message : 'No se pudo sincronizar')
+    } finally {
+      await leer()
+      setOcupado(null)
+    }
+  }
+
+  const desconectar = async () => {
+    if (!conexion) return
+    setOcupado('desconectar')
+    try {
+      await desconectarMoodle(conexion.id)
+      sonar('toggle_off')
+      avisar('Moodle desconectado: se han borrado su acceso y sus entregas')
+      setConexion(null)
+    } catch {
+      avisar('No se pudo desconectar')
+    } finally {
+      setOcupado(null)
+    }
+  }
+
+  return (
+    <div className="border border-linea bg-fondo-alto/60 px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <span>
+          <span className="block font-medium">Moodle del instituto</span>
+          <span className="block text-xs text-tinta-suave">aula.iesmontenaranco.com</span>
+        </span>
+
+        {!haySesion ? (
+          <span className="text-xs text-tinta-suave">Inicia sesión para conectarlo</span>
+        ) : conexion === undefined ? (
+          <span className="text-xs text-tinta-suave">Comprobando…</span>
+        ) : conexion ? (
+          <span className="flex gap-2">
+            <button type="button" disabled={ocupado !== null} onClick={sincronizar} className={`${boton} hover:border-arena hover:text-arena`}>
+              {ocupado === 'sincronizar' ? 'Sincronizando…' : 'Sincronizar ahora'}
+            </button>
+            <button type="button" disabled={ocupado !== null} onClick={desconectar} className={`${boton} hover:border-coral hover:text-coral`}>
+              Desconectar
+            </button>
+          </span>
+        ) : (
+          !formulario && (
+            <button
+              type="button"
+              onClick={() => {
+                sonar('select', { volumen: 0.7 })
+                setFormulario(true)
+              }}
+              className={`${boton} hover:border-arena hover:text-arena`}
+            >
+              Conectar
+            </button>
+          )
+        )}
+      </div>
+
+      {/* Estado de la conexión */}
+      {haySesion && conexion && (
+        <p className={`mt-3 text-xs ${conexion.ultimo_error ? 'text-coral' : 'text-tinta-suave'}`}>
+          {conexion.ultimo_error
+            ? conexion.ultimo_error
+            : `Conectado como ${conexion.usuario}${conexion.ultimo_sync ? ` · sincronizado ${hace(conexion.ultimo_sync)}` : ''}`}
+        </p>
+      )}
+
+      {/* Formulario: usuario y contraseña de Moodle */}
+      {haySesion && conexion === null && formulario && (
+        <form onSubmit={conectar} className="mt-4 space-y-3" aria-busy={ocupado === 'conectar'}>
+          <label className="block">
+            <span className="mb-1.5 block text-xs text-tinta-suave">Usuario de Moodle</span>
+            <input name="usuario" required autoComplete="username" className={campo} />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs text-tinta-suave">Contraseña de Moodle</span>
+            <input name="clave" type="password" required autoComplete="current-password" className={campo} />
+          </label>
+          <p className="text-xs leading-relaxed text-tinta-suave">
+            Tu contraseña <strong className="font-medium text-tinta">no se guarda</strong>: solo se usa para pedir a Moodle una
+            clave de acceso (la de su app móvil), que se guarda cifrada y que esta web usa únicamente para leer tus entregas
+            pendientes. Puedes revocarla cuando quieras desconectando aquí o en Moodle (Preferencias → Claves de seguridad).{' '}
+            <a href="#/privacidad" className="text-tinta underline underline-offset-4 hover:text-arena">
+              Más sobre tu privacidad
+            </a>
+            .
+          </p>
+          {error && (
+            <p role="alert" className="text-xs text-coral">
+              {error}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={ocupado !== null}
+              className="bg-arena px-4 py-2 text-sm font-semibold text-oscuro-fijo transition-colors hover:bg-tinta disabled:cursor-wait disabled:opacity-60"
+            >
+              {ocupado === 'conectar' ? 'Conectando…' : 'Conectar'}
+            </button>
+            <button type="button" onClick={() => setFormulario(false)} className="px-3 text-sm text-tinta-suave hover:text-tinta">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  )
+}

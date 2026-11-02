@@ -7,7 +7,7 @@ import { Panel } from '../ui/Panel'
 // Fuera del componente: es una constante y Logo3D no tiene que reiniciarse en cada render.
 const ZONAS: ZonaLogo[] = [
   { id: 'origen', etiqueta: 'Origen ↗', poligono: [[99, 23], [128, 49], [70, 49]] }, // tejado: la web madre, alvaro.cloud
-  { id: 'entrar', etiqueta: 'Login', poligono: [[74, 49], [126, 49], [126, 107], [74, 107]] }, // puerta central
+  { id: 'entrar', etiqueta: 'Cuenta', poligono: [[74, 49], [126, 49], [126, 107], [74, 107]] }, // puerta central
   { id: 'ajustes', etiqueta: 'Ajustes', poligono: [[129, 49], [171, 49], [171, 114], [129, 114]] }, // puerta derecha
   { id: 'web', etiqueta: 'Web del instituto ↗', poligono: [[29, 49], [71, 49], [71, 114], [29, 114]] }, // puerta izquierda
 ]
@@ -29,7 +29,7 @@ export function PanelLogo({ onNavegar, className = '' }: Props) {
   return (
     <Panel
       tutorial="logo"
-      etiqueta="Accesos: alvaro.cloud, login, ajustes y web del instituto"
+      etiqueta="Accesos: alvaro.cloud, tu cuenta, ajustes y web del instituto"
       className={`h-64 bg-transparent! sm:h-80 lg:h-auto ${className}`}
       fondo={<Logo3D zonas={ZONAS} onZona={alPulsar} className="size-full" />}
     />

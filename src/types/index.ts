@@ -31,6 +31,8 @@ export type Evento = {
   detalle?: string
   /** Actividad o apuntes de esta prueba (futuro backend); si falta, la web del centro */
   url?: string
+  /** Id estable (las entregas de la cuenta traen el suyo de la base de datos). Sin él, se calcula */
+  id?: string
 }
 
 /** Un evento ya "calculado" respecto a hoy */

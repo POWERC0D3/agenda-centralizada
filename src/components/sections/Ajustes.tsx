@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import type { Ruta } from '../../hooks/useRuta'
-import { cerrarSesion, useSesion } from '../../hooks/useSesion'
+import { borrarCuenta, cerrarSesion, useSesion } from '../../hooks/useSesion'
 import { useSonido } from '../../hooks/useSonido'
 import { colorAsignatura, nombreAsignatura } from '../../lib/datos'
 import { nombreGrupo, type Grupo } from '../../lib/grupos'
@@ -10,6 +10,7 @@ import { guardarPasoBienvenida, pasoBienvenida, pedirTutorial, terminarBienvenid
 import { aparecer, cascada } from '../../lib/movimiento'
 import { activarSonido, cambiarVolumen, sonar } from '../../lib/sonido'
 import { LogoMarca } from '../ui/LogoMarca'
+import { ConexionMoodle } from './ConexionMoodle'
 import { ElegirGrupo } from './ElegirGrupo'
 
 type Props = {
@@ -105,6 +106,7 @@ function BotonCuenta({ nombre, detalle, onClick }: { nombre: string; detalle: st
 export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRestablecer, onNavegar, avisar }: Props) {
   const sonido = useSonido()
   const { usuario, nombre, cargando } = useSesion()
+  const [borrando, setBorrando] = useState<null | 'pregunta' | 'borrando'>(null)
   const reducido = useReducedMotion()
   const centro = (el: HTMLElement) => {
     const r = el.getBoundingClientRect()
@@ -182,6 +184,38 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
               </>
             )}
           </div>
+          {/* Derecho de supresión (RGPD): borrar la cuenta y todo lo suyo. Dos pasos para que no sea sin querer */}
+          {usuario && (
+            <div className="mt-3 flex flex-wrap items-center justify-end gap-3 text-xs">
+              {borrando === 'pregunta' && <span className="text-coral">Se borrarán tu cuenta y todos tus datos. ¿Seguro?</span>}
+              <button
+                type="button"
+                disabled={borrando === 'borrando'}
+                onClick={() => {
+                  if (borrando !== 'pregunta') {
+                    sonar('caution', { volumen: 0.5 })
+                    setBorrando('pregunta')
+                    return
+                  }
+                  setBorrando('borrando')
+                  borrarCuenta()
+                    .then(() => avisar('Tu cuenta y todos tus datos se han borrado'))
+                    .catch((e: Error) => {
+                      avisar(e.message)
+                      setBorrando(null)
+                    })
+                }}
+                className="text-tinta-suave underline-offset-4 transition-colors hover:text-coral hover:underline disabled:opacity-50"
+              >
+                {borrando === 'pregunta' ? 'Sí, borrar mi cuenta' : borrando === 'borrando' ? 'Borrando…' : 'Borrar mi cuenta'}
+              </button>
+              {borrando === 'pregunta' && (
+                <button type="button" onClick={() => setBorrando(null)} className="text-tinta-suave hover:text-tinta">
+                  Cancelar
+                </button>
+              )}
+            </div>
+          )}
         </Grupo>
 
         {ve('grupo') && (
@@ -308,6 +342,10 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
               </label>
             </div>
             <p className="mt-3 text-xs text-tinta-suave">
+              <a href="#/privacidad" className="underline-offset-4 hover:text-tinta hover:underline">
+                Privacidad
+              </a>
+              {' · '}
               Sonidos de interfaz:{' '}
               <a
                 href="https://snd.dev/"
@@ -328,30 +366,23 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
             guiada={guiada}
             onContinuar={continuar('sincronizar')}
             titulo="Sincronizar"
-            descripcion="Trae tu calendario de exámenes automáticamente en vez de copiarlo a mano."
+            descripcion="Trae tus entregas de las plataformas del instituto a la agenda, sin copiarlas a mano."
           >
             <div className="space-y-2">
+              <ConexionMoodle haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
               <BotonCuenta
-                nombre="Microsoft 365"
-                detalle="Teams, Outlook y el Excel del calendario del centro"
+                nombre="Mis Aulas"
+                detalle="aulas2.site: tiene la API apagada, se conectará por otra vía"
                 onClick={() => {
-                  avisar('La conexión con Microsoft 365 llegará en la versión 2')
+                  avisar('La conexión con Mis Aulas llegará pronto')
                   avanzar('sincronizar')
                 }}
               />
               <BotonCuenta
-                nombre="Google Calendar"
-                detalle="Tus exámenes y entregas en tu calendario personal"
+                nombre="Teams"
+                detalle="Educastur no deja conectar apps: podrás añadir sus tareas a mano"
                 onClick={() => {
-                  avisar('La conexión con Google Calendar llegará en la versión 2')
-                  avanzar('sincronizar')
-                }}
-              />
-              <BotonCuenta
-                nombre="Importar archivo .ics"
-                detalle="Un calendario exportado desde cualquier aplicación"
-                onClick={() => {
-                  avisar('La importación de .ics llegará en la versión 2')
+                  avisar('Añadir tareas a mano llegará pronto')
                   avanzar('sincronizar')
                 }}
               />

@@ -243,9 +243,9 @@ Decisiones tomadas (2 nov 2026): arquitectura del §5 confirmada; modo **delegar
 2. [x] Crear el proyecto de Supabase y la tabla `entregas` con RLS (`supabase/migrations/`).
 3. [x] Pasar el login y el registro de la landing a Supabase Auth.
 4. [ ] Formulario rápido para añadir tareas de Teams a mano (enlace + título + fecha) y convertir `entregas` en `Evento` en el frontend.
-5. [ ] Tabla `conexiones_moodle` + Edge Function `conectar-moodle`, método A (portar la lógica de `mis_tareas.ps1`).
-6. [ ] Edge Function `sincronizar` + `pg_cron`.
-7. [ ] Pantalla en Ajustes para conectar y desconectar Moodle y relacionar cursos con asignaturas.
+5. [x] Tabla `conexiones_moodle` (token cifrado con AES-GCM en las Edge Functions) + Edge Function `conectar-moodle`, método A.
+6. [~] Edge Function `sincronizar` (hecha, con botón "Sincronizar ahora"). Falta el `pg_cron` cada 30 minutos.
+7. [~] Ajustes → Sincronizar: conectar, sincronizar y desconectar Moodle. La asignatura de cada curso se adivina por su nombre (`cursos_moodle`); falta poder corregirla desde la web.
 8. [ ] Método B (aulas2.site) con la contraseña cifrada.
 9. [ ] Más adelante: volver a mirar Teams con Power Automate (§4.4) o con el calendario (§4.3).
 

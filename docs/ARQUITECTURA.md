@@ -169,7 +169,8 @@ Todas las lecturas y escrituras van en `try/catch`: en una ventana privada o con
 | `escolar.ts` | El calendario escolar como índice por día | `infoDia`, `esLectivo`, `clasesDeLaFecha`, `proximaClase`, `entradasEscolares`, `INICIO`, `FIN` |
 | `eventos.ts` | Exámenes y entregas respecto a hoy | `eventosConDias`, `eventosVisibles`, `agruparPorSemana`, `proximoEvento`, `urlDe` |
 | `tareas.ts` | Genera las tareas de la Agenda | `tareasDelDia` |
-| `grupos.ts` | Grupos y acceso a sus datos | `datosDelGrupo`, `nombreGrupo`, `GRUPO_INICIAL` |
+| `grupos.ts` | Los grupos que existen (`GRUPOS`: DAW 1º A/B, DAM 1º B, DAW 2º A, DAM 2º B) con sus módulos, y el acceso a sus datos | `GRUPOS`, `modulosDeGrupo`, `letrasDe`, `ajustarGrupo`, `datosDelGrupo` |
+| `perfil.ts` | Los ajustes en la cuenta (tabla `perfiles`); se carga con `import()` dinámico | `descargarPerfil`, `subirPerfil`, `alCambiarSesion` |
 | `sonido.ts` | Motor de audio (ver [§11](#11-sonido)) | `sonar`, `viento`, `canica`, `marimba`, `timbre` |
 | `cristal.ts` | La lupa WebGL (ver [§9.4](#94-lupa-de-cristal-cristalts--lupacristaltsx)) | `crearCristal` |
 | `movimiento.ts` | Curvas y variantes de Motion compartidas | `EASE_SALIDA`, `cascada`, `aparecer` |
@@ -208,6 +209,8 @@ Cada tarea tiene un **id estable** (`entrega-<id>`, `dudas-PROG`…). Por eso se
 | `useGrupo()` | Grupo elegido, recordado entre visitas | |
 | `useHechas(dia)` | Tareas hechas de un día concreto | Si cambia el día con la web abierta, lee la nueva lista ("ajustar el estado durante el render") |
 | `useSesion()` | Quién ha iniciado sesión (`usuario`, `nombre`, `cargando`) y `cerrarSesion()` | Se suscribe a `supabase.auth.onAuthStateChange` (patrón Observer): se entera también desde otra pestaña |
+| `useAjustesEnLaNube()` | Sincroniza grupo, módulos y sonido con la cuenta: descarga al iniciar sesión (la nube manda), sube cada cambio (debounce de 0,6 s), vuelve a mirar al regresar a la pestaña y reinicia al cerrar sesión | Compara por JSON para no reenviar lo que acaba de descargar |
+| `useHaySesion()` | ¿Hay sesión? Primero lo mira en `localStorage` (al instante) y después lo confirma Supabase | Protege el panel: sin sesión, `location.replace('#/entrar')` |
 | `useAviso()` | Mensajes temporales tipo *toast* | |
 | `useSonido()` | La configuración de sonido, reactiva | Se suscribe a los cambios de `lib/sonido.ts` |
 

@@ -2,16 +2,20 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { MotionConfig, motion, useReducedMotion } from 'motion/react'
 import { useAhora } from './hooks/useAhora'
 import { useAviso } from './hooks/useAviso'
+import { useEntregasCuenta } from './hooks/useEntregasCuenta'
 import { useGrupo } from './hooks/useGrupo'
+import { useAjustesEnLaNube } from './hooks/useAjustesEnLaNube'
+import { useHaySesion } from './hooks/useHaySesion'
+import { borrarHechasLocales } from './hooks/useHechas'
 import { useModulos } from './hooks/useModulos'
 import { irA, useRuta, type Ruta } from './hooks/useRuta'
+import { useSonido } from './hooks/useSonido'
 import { nombreAsignatura } from './lib/datos'
 import { eventosVisibles } from './lib/eventos'
 import { diaSemana, fechaDeLaSemana, inicioDelDia, isoLocal, lunesDe, mismoDia, parseFecha } from './lib/fechas'
-import { datosDelGrupo, nombreGrupo } from './lib/grupos'
-import { modulosDe } from './lib/horario'
+import { datosDelGrupo, GRUPO_INICIAL, modulosDeGrupo, nombreGrupo } from './lib/grupos'
 import { cascada } from './lib/movimiento'
-import { sonar, viento } from './lib/sonido'
+import { fijarConfigSonido, sonar, viento } from './lib/sonido'
 import { Aviso } from './components/ui/Aviso'
 import { CortinaPixel, type FaseCortina } from './components/ui/CortinaPixel'
 import { FondoPuntos } from './components/ui/FondoPuntos'
@@ -28,15 +32,44 @@ const cargarAjustes = () => import('./components/sections/Ajustes')
 const cargarLanding = () => import('./components/landing/Landing')
 const Ajustes = lazy(() => cargarAjustes().then((m) => ({ default: m.Ajustes })))
 const Landing = lazy(() => cargarLanding().then((m) => ({ default: m.Landing })))
+// La política de privacidad: se lee poco, así que ni siquiera se precarga
+const Privacidad = lazy(() => import('./components/sections/Privacidad').then((m) => ({ default: m.Privacidad })))
 
 type Origen = { x: number; y: number }
 
 function App() {
   const ahora = useAhora()
   const ruta = useRuta()
-  const { excluidos, permanentes, alternarTemporal, alternarPermanente, restablecer } = useModulos()
+  const { excluidos, permanentes, alternarTemporal, alternarPermanente, restablecer, establecerPermanentes } = useModulos()
   const { aviso, avisar } = useAviso()
   const { grupo, setGrupo } = useGrupo()
+  const sonido = useSonido()
+
+  // Ajustes en la cuenta: lo mismo en todos los dispositivos (sin sesión, solo en este navegador).
+  // Los módulos apagados con un clic en el horario NO van: son temporales a propósito
+  const ajustesCuenta = useMemo(
+    () => ({
+      grupo: { ciclo: grupo.ciclo, curso: grupo.curso, letra: grupo.letra },
+      modulos: [...permanentes].sort(),
+      sonido: { activo: sonido.activo, volumen: sonido.volumen },
+    }),
+    [grupo, permanentes, sonido],
+  )
+  useAjustesEnLaNube(
+    ajustesCuenta,
+    (a) => {
+      setGrupo(a.grupo)
+      establecerPermanentes(a.modulos)
+      fijarConfigSonido(a.sonido)
+    },
+    () => {
+      // Al cerrar sesión, valores por defecto: en un ordenador compartido, el siguiente no ve tu configuración
+      setGrupo(GRUPO_INICIAL)
+      establecerPermanentes([])
+      fijarConfigSonido({ activo: true, volumen: 0.4 })
+      borrarHechasLocales()
+    },
+  )
 
   // Horario y exámenes del grupo elegido (null si aún no hay datos de ese grupo)
   const datos = useMemo(() => datosDelGrupo(grupo), [grupo])
@@ -71,10 +104,21 @@ function App() {
     window.scrollTo(0, 0)
   }, [pagina])
 
+  // El panel es solo para quien ha iniciado sesión: sin sesión, al login.
+  // location.replace (y no irA) sustituye la entrada del historial: "Atrás" no vuelve a un panel que te echa
+  const haySesion = useHaySesion()
+  const panelBloqueado = ruta === 'panel' && !haySesion
+  useEffect(() => {
+    if (panelBloqueado) window.location.replace('#/entrar')
+  }, [panelBloqueado])
+
   const [cortina, setCortina] = useState<(FaseCortina & { destino: Ruta; mensaje?: string }) | null>(null)
 
   // Un único sitio donde se aplican los módulos apagados: lo que no cursas no llega a ningún panel
-  const lista = useMemo(() => (datos ? eventosVisibles(datos.eventos, ahora, excluidos) : []), [datos, ahora, excluidos])
+  // Las pruebas del grupo (JSON) + las entregas de la cuenta (Moodle…), todas juntas
+  const entregasCuenta = useEntregasCuenta()
+  const eventos = useMemo(() => [...(datos?.eventos ?? []), ...entregasCuenta], [datos, entregasCuenta])
+  const lista = useMemo(() => eventosVisibles(eventos, ahora, excluidos), [eventos, ahora, excluidos])
 
   // La fecha bajo la lupa del horario, que es también el día que enseña la Agenda. Se guarda como
   // texto ISO ("2026-11-13"). null = "hoy" (en fin de semana, sin lupa hasta que se elija un día)
@@ -85,7 +129,7 @@ function App() {
   const lunes = lunesDe(lupa ?? fechaDeLaSemana(ahora, 1))
   // Hoy: la hora real (la agenda sabe qué clases ya pasaron). Otro día: ese día a las 00:00
   const fechaAgenda = enHoy || !lupa ? ahora : lupa
-  const listaAgenda = enHoy || !datos ? lista : eventosVisibles(datos.eventos, fechaAgenda, excluidos)
+  const listaAgenda = enHoy ? lista : eventosVisibles(eventos, fechaAgenda, excluidos)
   const elegirFecha = (f: Date | null) => {
     const destino = isoLocal(f ?? ahora)
     const actual = isoLocal(lupa ?? ahora)
@@ -124,7 +168,7 @@ function App() {
       <Suspense fallback={null}>
         {ruta === 'ajustes' ? (
           <Ajustes
-            modulos={horario ? modulosDe(horario) : []}
+            modulos={modulosDeGrupo(grupo)}
             grupo={grupo}
             onGrupo={setGrupo}
             excluidas={permanentes}
@@ -133,9 +177,11 @@ function App() {
             onNavegar={navegar}
             avisar={avisar}
           />
+        ) : ruta === 'privacidad' ? (
+          <Privacidad />
         ) : ruta === 'entrar' || ruta === 'crear' ? (
           <Landing modo={ruta} onNavegar={navegar} />
-        ) : (
+        ) : panelBloqueado ? null : (
           // En escritorio (lg) el panel ocupa exactamente la pantalla; en móvil las celdas se apilan
           <div className="flex min-h-svh flex-col lg:h-svh lg:overflow-hidden">
             <Cabecera horario={horario} lista={lista} excluidas={excluidos} grupo={grupo} />
@@ -177,7 +223,7 @@ function App() {
               <Calendario
                 ahora={ahora}
                 lista={lista}
-                sinDatos={datos ? undefined : nombre}
+                sinDatos={datos || entregasCuenta.length ? undefined : nombre}
                 className="md:col-span-2 lg:col-span-8 lg:col-start-1 lg:row-start-2"
               />
             </motion.main>

@@ -8,5 +8,18 @@
   { "id": "IP",    "nombre": "Inglés Profesional" },
   { "id": "IPEI",  "nombre": "Itinerario Personal", "completo": "Itinerario Personal para la Empleabilidad I" },
   { "id": "DASP",  "nombre": "Digitalización Aplicada", "completo": "Digitalización Aplicada a los Sectores Productivos" },
-  { "id": "SASP",  "nombre": "Sostenibilidad Aplicada", "completo": "Sostenibilidad Aplicada al Sistema Productivo" }
+  { "id": "SASP",  "nombre": "Sostenibilidad Aplicada", "completo": "Sostenibilidad Aplicada al Sistema Productivo" },
+
+  { "id": "DWEC",  "nombre": "Entorno Cliente", "completo": "Desarrollo Web en Entorno Cliente" },
+  { "id": "DWES",  "nombre": "Entorno Servidor", "completo": "Desarrollo Web en Entorno Servidor" },
+  { "id": "DESAW", "nombre": "Despliegue Web", "completo": "Despliegue de Aplicaciones Web" },
+  { "id": "DIW",   "nombre": "Interfaces Web", "completo": "Diseño de Interfaces Web" },
+  { "id": "IPEII", "nombre": "Itinerario Personal II", "completo": "Itinerario Personal para la Empleabilidad II" },
+
+  { "id": "AD",    "nombre": "Acceso a Datos" },
+  { "id": "DI",    "nombre": "Desarrollo de Interfaces" },
+  { "id": "PMDM",  "nombre": "Programación Multimedia", "completo": "Programación Multimedia y Dispositivos Móviles" },
+  { "id": "PSP",   "nombre": "Servicios y Procesos", "completo": "Programación de Servicios y Procesos" },
+  { "id": "SGE",   "nombre": "Gestión Empresarial", "completo": "Sistemas de Gestión Empresarial" },
+  { "id": "PIDM",  "nombre": "Proyecto", "completo": "Proyecto Intermodular" }
 ]

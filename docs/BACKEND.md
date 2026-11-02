@@ -18,7 +18,8 @@ Cómo y por qué la agenda pasó de ser una web solo de frontend a tener **cuent
 8. [Cómo lo usa el frontend](#8-cómo-lo-usa-el-frontend)
 9. [Pruebas realizadas](#9-pruebas-realizadas)
 10. [Cómo trabajar con la base de datos](#10-cómo-trabajar-con-la-base-de-datos)
-11. [Próximos pasos](#11-próximos-pasos)
+11. [Lo añadido después](#11-lo-añadido-después-2-nov-2026)
+12. [Próximos pasos](#12-próximos-pasos)
 
 ---
 
@@ -218,11 +219,33 @@ El 401 sin sesión **no lo produce el RLS, sino el `revoke` de antes**: el rol `
 - poner la `service_role` en el frontend;
 - escribir contraseñas, tokens o cookies en logs.
 
-## 11. Próximos pasos
+## 11. Lo añadido después (2 nov 2026)
+
+| Migración / función | Qué hace |
+|---|---|
+| `20261102180000_perfiles.sql` | Ajustes en la cuenta (grupo, módulos, sonido). Sincronizados por `useAjustesEnLaNube`: al iniciar sesión manda la nube |
+| `20261102200000_tareas_hechas.sql` | Tareas de la Agenda marcadas como hechas, por día (`useHechas` + `lib/hechas.ts`) |
+| `20261102210000_conexiones_moodle.sql` | Conexiones de Moodle (token cifrado; el navegador **no puede pedir esa columna**: permisos por columna), cursos con su asignatura y la clave foránea de `entregas` |
+| `functions/conectar-moodle` | Usuario y contraseña → token de Moodle → se guarda **cifrado** (AES-256-GCM, llave en el secreto `CLAVE_CIFRADO`) → primera sincronización. La contraseña no se guarda |
+| `functions/sincronizar` | Lee la Línea de tiempo y deja `entregas` igual que Moodle (upsert de lo pendiente, borra lo entregado) |
+| `functions/borrar-cuenta` | Borra el usuario; todo lo suyo se va en cascada (derecho de supresión del RGPD) |
+
+**Seguridad de las funciones:**
+- Comprueban ellas mismas quién llama (`verify_jwt = false` en `config.toml` y 401 sin sesión válida).
+- CORS solo para `agenda.alvaro.cloud` y `localhost`.
+- El navegador manda `sitio: 'centro'` y no una URL (sin SSRF).
+- Usan `service_role`, que nunca sale del servidor.
+
+**Publicarlas:**
+```bash
+npx supabase functions deploy --use-api
+npx supabase secrets set CLAVE_CIFRADO=…   # 32 bytes en base64; si se pierde, hay que reconectar Moodle
+```
+
+## 12. Próximos pasos
 
 Según el plan de [INTEGRACIONES.md §7](INTEGRACIONES.md#7-próximos-pasos):
-1. **Formulario para añadir tareas a mano** (título, fecha, enlace y asignatura), guardadas en `entregas`, y mezclarlas con las del JSON en la Agenda y el Calendario.
-2. **`conexiones_moodle`** + Edge Function **`conectar-moodle`** (método A, token).
-3. **`sincronizar`** + `pg_cron`.
-4. **Método B** (aulas2.site) con la contraseña cifrada en Vault.
-5. **Política de privacidad**, antes de abrirlo a más alumnos.
+1. **`pg_cron`** para sincronizar Moodle cada ~30 minutos sin pulsar nada (y comprobar de paso si evita la pausa del plan gratuito).
+2. **Corregir desde Ajustes la asignatura de cada curso de Moodle** (la tabla `cursos_moodle` ya lo permite).
+3. **Formulario para añadir tareas a mano** (Teams y lo que no tenga integración), con `origen = 'manual'`.
+4. **Método B** (aulas2.site) con la contraseña cifrada, con la misma llave que los tokens.

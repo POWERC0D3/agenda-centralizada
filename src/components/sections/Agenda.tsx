@@ -69,6 +69,9 @@ const FOCO = [
   // En escritorio la cara frontal retrocede lo que mide el taco (24 × 14 px): así sus caras de
   // profundidad caben dentro de la celda y el canto de atrás coincide con las líneas del resto del panel
   'lg:mt-3.5 lg:ml-6',
+  // En móvil y tablet las celdas miden lo que su contenido: sin alto fijo, la Agenda crecería y encogería
+  // al cambiar de día ("pensando", lista, día vacío…) y empujaría todo lo de debajo. En escritorio lo fija la rejilla
+  'h-[35rem] lg:h-auto',
   'bg-[radial-gradient(120%_55%_at_50%_0%,color-mix(in_oklab,var(--color-arena)_8%,transparent),transparent_70%),linear-gradient(180deg,#1c1b1a,#141414_50%,#0f0f0f)]!',
   'shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_0_0_1px_color-mix(in_oklab,var(--color-arena)_55%,transparent),0_10px_20px_-6px_rgb(0_0_0/0.75),0_34px_70px_-18px_rgb(0_0_0/0.95),0_0_60px_-14px_color-mix(in_oklab,var(--color-arena)_35%,transparent)]!',
 ].join(' ')
@@ -288,8 +291,8 @@ function PlanDelDia({ ahora, fecha, horario, lista, excluidas, cargando, dir }: 
                 <Escritura texto={esHoy ? 'Hoy no tienes nada pendiente. Descansa.' : 'Nada pendiente para este día.'} />
               </p>
             ) : (
-              // Hueco que llenar: alto fijo en móvil, el resto de la celda en escritorio
-              <div ref={setZona} className="relative h-[28rem] min-h-0 lg:h-auto lg:flex-1">
+              // Hueco que llenar: lo que deja libre la celda (de alto fijo en todos los tamaños)
+              <div ref={setZona} className="relative min-h-0 flex-1">
                 <ol>
                   {ordenadas.map((t) => (
                     // retraso según la posición ORIGINAL (por prioridad): al marcar una tarea no cambia, así el
