@@ -53,10 +53,12 @@ for (const [ext, tipo] of Object.entries(TIPOS)) {
 aws('s3', 'cp', 'dist/index.html', `${destino}/index.html`, '--only-show-errors',
   '--content-type', 'text/html; charset=utf-8', '--cache-control', 'no-cache')
 
-// 3) CloudFront guarda copias por todo el mundo: se le pide que olvide la de index.html (gratis hasta 1000 rutas al mes)
+// 3) CloudFront guarda copias por todo el mundo: se le pide que las olvide. No basta con index.html: los archivos
+//    que conservan su nombre (favicon, sonidos…) seguirían viejos hasta un día. "/*" vacía todo y cuenta como UNA
+//    sola ruta de las 1000 gratis al mes (a los assets con hash no les afecta: su nombre nuevo nunca estuvo en caché)
 if (DISTRIBUCION) {
-  console.log('\n▸ Vaciando la caché de index.html en CloudFront…')
-  aws('cloudfront', 'create-invalidation', '--distribution-id', DISTRIBUCION, '--paths', '/index.html', '/', '--query', 'Invalidation.Status', '--output', 'text')
+  console.log('\n▸ Vaciando la caché de CloudFront…')
+  aws('cloudfront', 'create-invalidation', '--distribution-id', DISTRIBUCION, '--paths', '/*', '--query', 'Invalidation.Status', '--output', 'text')
 } else {
   console.log('\n(sin DISTRIBUCION: no se vacía la caché de CloudFront)')
 }

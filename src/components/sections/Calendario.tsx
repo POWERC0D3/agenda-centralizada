@@ -341,6 +341,7 @@ export function Calendario({ ahora, lista, sinDatos, className = '' }: Props) {
 
   return (
     <Panel
+      tutorial="calendario"
       titulo="Calendario"
       ayuda="Exámenes y entregas, o el calendario escolar (festivos y vacaciones). Pulsa un día o una prueba para saltar a ella en la lista."
       extra={

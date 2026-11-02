@@ -141,7 +141,7 @@ export function Cabecera({ horario, lista, excluidas, grupo }: Props) {
     )
 
   return (
-    <header className="cristal relative z-30 shrink-0 border-b border-linea bg-fondo/60 px-4 text-xs text-tinta-suave">
+    <header data-tutorial="cabecera" className="cristal relative z-30 shrink-0 border-b border-linea bg-fondo/60 px-4 text-xs text-tinta-suave">
       <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-4">
         <dl className="flex min-w-0">{cuentaPrueba('hidden md:flex')}</dl>
 

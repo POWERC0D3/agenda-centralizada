@@ -27,9 +27,10 @@ Cómo está organizado el código de Monte Naranco Agenda Digital y cómo funcio
 
 ## 1. Visión general
 
-Es una **SPA (Single Page Application)** solo de frontend: Vite sirve un `index.html` con un `<div id="root">`, y React pinta dentro todo lo demás. No hay backend:
+Es una **SPA (Single Page Application)**: Vite sirve un `index.html` con un `<div id="root">`, y React pinta dentro todo lo demás. El backend es **Supabase**, sin servidor propio (ver [BACKEND.md](BACKEND.md)):
 
-- los **datos** (horario, exámenes, calendario escolar) son archivos JSON importados en el build;
+- las **cuentas** (registro, login, sesión) son de Supabase Auth, y las **entregas propias** irán a su base de datos Postgres (tabla `entregas`, protegida con RLS);
+- los **datos** del curso (horario, exámenes, calendario escolar) son, de momento, archivos JSON importados en el build;
 - las **preferencias** (grupo, módulos apagados, tareas hechas, sonido) se guardan en `localStorage`;
 - la **navegación** usa el `#` de la URL (`#/ajustes`, `#/entrar`…), sin librería de rutas;
 - el resultado del build (`dist/`) son **archivos estáticos**, servidos desde S3 + CloudFront en [agenda.alvaro.cloud](https://agenda.alvaro.cloud) (ver [§16](#16-despliegue)).
@@ -54,6 +55,7 @@ localStorage│                                          │  ───►  Land
 | **Datos** | `src/data/` | JSON estático | Ficheros de recursos |
 | **Dominio** | `src/lib/` | Funciones puras sin React: reciben datos y devuelven datos | Servicios / utilidades `static` |
 | **Estado** | `src/hooks/` | Hooks de React que guardan y sincronizan estado | Beans con estado |
+| **Base de datos** | `supabase/migrations/` | SQL versionado: tablas, permisos y RLS. Se aplica con la CLI | Flyway / Liquibase |
 | **Interfaz** | `src/components/` | Componentes que pintan y reciben eventos | Vistas / controladores |
 
 La separación importa: **toda la lógica de fechas, horario, eventos y tareas se puede probar sin navegador**, porque no depende de React.
@@ -112,7 +114,7 @@ Guardar solo lo mínimo y **derivar el resto** evita que dos estados se contradi
   - *Iniciar sesión* llama a `navegar('panel', …)`;
   - *Crear cuenta* llama a `navegar('ajustes', …)`.
 
-  La función baja por *props*: `App` → `Landing` (`onNavegar`) → `Hero` → `TarjetaCuenta` (`onAcceder`). Aún no hay cuentas: los datos no se comprueban ni se guardan.
+  La función baja por *props*: `App` → `Landing` (`onNavegar`) → `Hero` → `TarjetaCuenta` (`onAcceder`). El formulario usa Supabase Auth (ver [BACKEND.md §7](BACKEND.md#7-autenticación-registro-e-inicio-de-sesión)).
 - **Carga diferida:** `Ajustes` y `Landing` se importan con `React.lazy` + `Suspense`, y se precargan con `requestIdleCallback` en cuanto el navegador está libre.
 
 ---
@@ -132,6 +134,17 @@ src/data/
 ```
 
 `lib/grupos.ts` → `datosDelGrupo(grupo)` es **el único punto de acceso** a los datos de un grupo (patrón *repositorio*). Devuelve `null` si no hay datos y la interfaz muestra un estado vacío (`SinDatos`).
+
+### Supabase
+
+La sesión la guarda `supabase-js` en `localStorage` (clave `sb-<proyecto>-auth-token`) y la renueva sola. Las tablas viven en Postgres. Su esquema está en `supabase/migrations/` y su seguridad se explica en [BACKEND.md §6](BACKEND.md#6-seguridad-claves-permisos-y-rls).
+
+### `sessionStorage` (primera visita)
+
+| Clave | Contenido | Dónde |
+|---|---|---|
+| `agenda:bienvenida` | Paso de la configuración guiada de Ajustes (se crea al registrarse y se borra al terminar) | `lib/bienvenida.ts` |
+| `agenda:tutorial` | Tutorial del panel pendiente (se crea con "Ir al panel" al final de la configuración guiada y se borra al terminar) | `lib/bienvenida.ts` |
 
 ### `localStorage`
 
@@ -161,6 +174,8 @@ Todas las lecturas y escrituras van en `try/catch`: en una ventana privada o con
 | `cristal.ts` | La lupa WebGL (ver [§9.4](#94-lupa-de-cristal-cristalts--lupacristaltsx)) | `crearCristal` |
 | `movimiento.ts` | Curvas y variantes de Motion compartidas | `EASE_SALIDA`, `cascada`, `aparecer` |
 | `gsap.ts` | Registra los plugins de GSAP una sola vez | `gsap`, `ScrollTrigger`, `useGSAP` |
+| `supabase.ts` | El único cliente de Supabase y la traducción de errores de Auth | `supabase`, `mensajeDeError` |
+| `bienvenida.ts` | Marcas de la primera visita (configuración guiada y tutorial) | `empezarBienvenida`, `pasoBienvenida`, `pedirTutorial`, `hayTutorial`… |
 | `config.ts` | Constantes de configuración (≈ `application.properties`) | `URL_CENTRO` (web del instituto), `URL_ORIGEN` (alvaro.cloud) |
 
 ### Cómo se generan las tareas (`tareasDelDia`)
@@ -192,6 +207,7 @@ Cada tarea tiene un **id estable** (`entrega-<id>`, `dudas-PROG`…). Por eso se
 | `useModulos()` | Módulos apagados: `permanentes` (Ajustes, `localStorage`), temporales (clic en el horario, solo memoria) y `excluidos` = la unión | Devuelve `Set` nuevos para que React detecte el cambio por referencia |
 | `useGrupo()` | Grupo elegido, recordado entre visitas | |
 | `useHechas(dia)` | Tareas hechas de un día concreto | Si cambia el día con la web abierta, lee la nueva lista ("ajustar el estado durante el render") |
+| `useSesion()` | Quién ha iniciado sesión (`usuario`, `nombre`, `cargando`) y `cerrarSesion()` | Se suscribe a `supabase.auth.onAuthStateChange` (patrón Observer): se entera también desde otra pestaña |
 | `useAviso()` | Mensajes temporales tipo *toast* | |
 | `useSonido()` | La configuración de sonido, reactiva | Se suscribe a los cambios de `lib/sonido.ts` |
 
@@ -208,16 +224,16 @@ Cada tarea tiene un **id estable** (`entrega-<id>`, `dudas-PROG`…). Por eso se
 | `Calendario` | Modos *Exámenes* y *Escolar* con `AnimatePresence`. Mes navegable (limitado a meses con información ±1), lista agrupada por semanas y filtros con subrayado animado (`layoutId`). Pulsar un día del mes hace `scrollIntoView` hasta su prueba. Por debajo de `lg` la lista tiene `max-h` y scroll propio (`overscroll-contain`). |
 | `Agenda` | El plan del día: cabecera ("Jueves 12 · Hoy · 0/7"), estado de "pensando", tareas con `Escritura` y casillas. En escritorio, el "taco" isométrico. |
 | `PanelLogo` | El `Logo3D` con sus zonas: tejado → *Origen* (alvaro.cloud, otra pestaña), puerta central → *Login*, derecha → *Ajustes*, izquierda → web del instituto (otra pestaña). |
-| `Ajustes` | Página de ajustes: grupo, módulos, sonido, sincronización. |
+| `Ajustes` | Página de ajustes: cuenta, grupo, módulos, sonido y sincronización. **Configuración guiada** la primera vez (tras registrarse): las secciones aparecen una a una con un fade-in, al tocar una opción de la actual o pulsar "Continuar", y al final el botón "Ir al panel". El paso va en `sessionStorage` (`lib/bienvenida.ts`), así que si se recarga a mitad sigue donde estaba, y al terminar se borra. |
 | `ElegirGrupo` | Los tres `Carrusel` (ciclo, curso, grupo). |
 
 ### `components/landing/`
 
 | Componente | Qué es |
 |---|---|
-| `Landing` | Barra fija + `Hero`. El botón "Entrar" salta al final del ScrollTrigger. Recibe `onNavegar` (la `navegar` de `App`) para "Volver al panel" y para el formulario. |
+| `Landing` | Solo el `Hero`, sin barra de navegación: la única salida es la tarjeta de cuenta (entrar, registrarse o, con sesión, ir al panel). Recibe `onNavegar` (la `navegar` de `App`) y se la pasa al formulario. |
 | `Hero` | La escena fijada con GSAP (ver [§10](#10-animación)). |
-| `Acceso` | `TarjetaCuenta`: pestañas de crear cuenta / iniciar sesión y el formulario. Usa la validación nativa (`required`, `type="email"`, `user-invalid:` en coral); un único `onInvalidCapture` en el `<form>` hace sonar el aviso, porque `invalid` no burbujea. Al enviarse llama a `onAcceder(destino, centro, mensaje)`. |
+| `Acceso` | `TarjetaCuenta`: pestañas de crear cuenta / iniciar sesión y el formulario. Usa la validación nativa (`required`, `type="email"`, `user-invalid:` en coral); un único `onInvalidCapture` en el `<form>` hace sonar el aviso, porque `invalid` no burbujea. Al enviarse llama a **Supabase Auth** (`signUp` con el nombre en `user_metadata`, o `signInWithPassword`), muestra "Entrando…" y los errores traducidos, y al terminar llama a `onAcceder(destino, centro, mensaje)`. El registro marca la configuración guiada. Con la sesión ya iniciada, en vez del formulario muestra quién eres. |
 
 ### `components/ui/`: piezas reutilizables
 
@@ -232,6 +248,7 @@ Cada tarea tiene un **id estable** (`entrega-<id>`, `dudas-PROG`…). Por eso se
 | `Odometro` | Números que ruedan como un cuentakilómetros (cada cifra en su "ventanita"). |
 | `Carrusel<T>` | Selector circular genérico: flechas, rueda, arrastre y teclado. |
 | `EnlaceExterno` | Enlace con ↗ que solo se ve al pasar el ratón (en dispositivos con hover). |
+| `Tutorial` | Tutorial del panel, solo tras la configuración guiada (marca `agenda:tutorial` en `sessionStorage`). Cada paso busca su celda por `data-tutorial` (prop `tutorial` de `Panel`) y la rodea con un recuadro cuya sombra `0 0 0 9999px` oscurece el resto de la pantalla. El recuadro se anima de una celda a otra, se recorta a la pantalla y la tarjeta se coloca debajo, encima o dentro según el espacio. Avanza con clic, → o Enter; Esc lo cierra. |
 | `CuentaAtras`, `Aviso`, `LogoMarca`, `SinDatos` | Etiqueta de días restantes, toast, logo SVG pequeño y estado vacío. |
 
 ---
@@ -456,7 +473,7 @@ Al usar rutas con `#`, el servidor siempre recibe `/`, así que **no hace falta 
    | `index.html` | `no-cache` | Es el que apunta a los assets nuevos |
 
 3. Sube `index.html` **al final**, para que nunca apunte a archivos que aún no existen.
-4. Invalida `/index.html` y `/` en CloudFront. Las 1.000 primeras rutas al mes son gratis.
+4. Invalida `/*` en CloudFront. No basta con `index.html`: los archivos que conservan su nombre (favicon, sonidos) seguirían viejos hasta un día en los nodos de CloudFront. Un comodín cuenta como **una sola ruta** de las 1.000 gratuitas al mes.
 
 Los assets antiguos **no se borran**: una pestaña abierta con la versión anterior puede pedir todavía uno de sus trozos diferidos.
 

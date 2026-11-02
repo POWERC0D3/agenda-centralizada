@@ -367,6 +367,7 @@ export function Agenda({ ahora, fecha, horario, grupo, lista, excluidas, onHoy, 
 
   const cabecera = {
     titulo: 'Agenda',
+    tutorial: 'agenda',
     ayuda:
       'Tu plan del día: lo que tienes que estudiar y hacer, ordenado por prioridad según tus exámenes y entregas. Márcalo cuando lo termines. Con la lupa del horario puedes ver el de otro día.',
     extra: !esHoy && (

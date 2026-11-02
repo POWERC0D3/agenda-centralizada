@@ -244,6 +244,7 @@ export function HorarioSemanal({
 
   const cabecera = {
     titulo: 'Horario',
+    tutorial: 'horario',
     ayuda:
       'Tu semana de clases. La lupa marca el día que ves en la Agenda: muévela con la rueda (pasa de semana al llegar al viernes o al lunes), las flechas o pulsando el nombre del día. Pasa el ratón por una asignatura para ver todas sus horas; haz clic para apagarla solo por ahora (para siempre, desde Ajustes).',
     extra: (

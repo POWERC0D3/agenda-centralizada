@@ -113,7 +113,7 @@ export function Hero({ modo, onAcceder }: Props) {
   )
 
   return (
-    <section ref={raiz} className="group/hero relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-4 pt-20 pb-10">
+    <section ref={raiz} className="group/hero relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-4 py-10">
       <div className="contenido flex w-full flex-col items-center">
         {/* Texto: por encima de las fichas (z-20) para que se lea aunque pasen por detrás */}
         <div className="relative z-20 mx-auto max-w-4xl text-center">

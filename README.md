@@ -41,13 +41,16 @@ En escritorio el panel ocupa **exactamente la pantalla, sin scroll**. En móvil 
 | **Agenda** | Las tareas del día elegido en la lupa, deducidas de las pruebas y del horario ("Termina…", "Repasa…", "Reparte el repaso"…). Se pueden marcar como hechas. Aparece con un efecto de escritura después de un breve estado de "pensando". |
 
 ### Ajustes (`#/ajustes`)
+- **Tu cuenta:** con quién has iniciado sesión y "Cerrar sesión" (o "Iniciar sesión" si no hay sesión).
 - **Tu grupo:** ciclo (DAW / DAM), curso (1º / 2º) y grupo (A / B) con carruseles. De momento solo hay datos de **DAW 1º A**.
 - **Tus módulos:** marcar los módulos que no cursas (convalidados). Se guardan en el navegador y desaparecen de toda la web.
 - **Sonido:** activar o silenciar y volumen.
 - **Sincronizar:** botones de muestra para la futura sincronización con Microsoft 365.
 
+La **primera vez**, justo después de crear la cuenta, Ajustes se configura **paso a paso**: cada sección aparece con un fade-in cuando eliges algo en la anterior (o pulsas "Continuar"), y al final aparece "Ir al panel". Al pulsarlo, el panel muestra un **tutorial de 5 pasos** (unos 15 segundos): un recuadro ilumina cada sección (horario, agenda, calendario, logo y cabecera), el resto se oscurece y una tarjeta explica para qué sirve. Se avanza con un clic, → o Enter, y Esc lo salta. Solo sale esa primera vez.
+
 ### Landing de acceso (`#/entrar`, `#/crear`)
-Una escena única animada con el scroll: unas fichas de distintas plataformas (Teams, Educastur, aula virtual, Excel…) llegan desordenadas, encajan en una lista ("Todas tus tareas. Un mismo sitio.") y la lista deja paso a la tarjeta de inicio de sesión o registro. **Las cuentas aún no existen:** los campos son obligatorios, pero no se comprueban ni se guardan. *Iniciar sesión* lleva al panel y *Crear cuenta* lleva a Ajustes, para elegir grupo y módulos antes de empezar.
+Una escena única animada con el scroll: unas fichas de distintas plataformas (Teams, Educastur, aula virtual, Excel…) llegan desordenadas, encajan en una lista ("Todas tus tareas. Un mismo sitio.") y la lista deja paso a la tarjeta de inicio de sesión o registro. **Las cuentas son reales** (Supabase Auth): *Crear cuenta* registra al alumno y lo lleva a la configuración guiada de Ajustes; *Iniciar sesión* lo lleva al panel. Los errores salen en español ("Correo o contraseña incorrectos"…). Con la sesión ya iniciada, la tarjeta muestra quién eres y lleva al panel. La landing no tiene barra de navegación: la tarjeta es la única salida.
 
 ### Transversal
 - **Transición entre páginas** con una "cortina" de píxeles que nace del punto pulsado.
@@ -67,6 +70,10 @@ Una escena única animada con el scroll: unas fichas de distintas plataformas (T
 |---|---|---|
 | ![Página de ajustes](docs/img/ajustes.png) | <img src="docs/img/movil.png" alt="Panel en móvil" width="240"> | <img src="docs/img/movil-horario.png" alt="Horario en móvil, cada clase con la altura de su duración" width="240"> |
 
+| Tutorial del panel (primera visita) |
+|---|
+| ![Tutorial: el recuadro ilumina el horario y el resto se oscurece](docs/img/tutorial.png) |
+
 > Las capturas se han hecho con `?ahora=2026-11-12T09:30` (jueves, en mitad de una clase).
 
 ---
@@ -83,9 +90,10 @@ Una escena única animada con el scroll: unas fichas de distintas plataformas (T
 | [GSAP + ScrollTrigger](https://gsap.com) | 3.15 | La escena de la landing ligada al scroll |
 | Canvas 2D y WebGL | — | Logo 3D, fondo de puntos, cortina de píxeles y lupa de cristal (sin librerías) |
 | Web Audio API | — | Motor de sonido (sin librerías) |
+| [Supabase](https://supabase.com) (`supabase-js` 2, CLI 3) | — | Backend: Auth, Postgres con RLS, migraciones |
 | ESLint | 10 | Calidad del código |
 
-No hay backend: los datos son archivos JSON dentro del proyecto y las preferencias se guardan en `localStorage`.
+El **backend** es [Supabase](https://supabase.com): cuentas de usuario y una base de datos Postgres protegida con RLS, sin servidor propio (ver [docs/BACKEND.md](docs/BACKEND.md)). El horario y el calendario de exámenes siguen saliendo de archivos JSON del proyecto, y las preferencias se guardan en `localStorage`.
 
 ---
 
@@ -137,7 +145,7 @@ Para publicar una versión nueva (con la CLI de AWS configurada):
 npm run deploy
 ```
 
-El script [`scripts/desplegar.mjs`](scripts/desplegar.mjs) compila, sube los archivos con su tipo y su caché y vacía la caché de `index.html` en CloudFront:
+El script [`scripts/desplegar.mjs`](scripts/desplegar.mjs) compila, sube los archivos con su tipo y su caché y vacía la caché de CloudFront (`/*`):
 - **`assets/`:** se cachean un año, porque su nombre lleva un hash del contenido.
 - **Sonidos e iconos:** se cachean un día.
 - **`index.html`:** sin caché, y se sube el último.
@@ -159,6 +167,7 @@ src/
 ├── lib/                    # Lógica sin React: fechas, horario, eventos, calendario escolar, tareas, sonido, cristal (WebGL)…
 ├── data/                   # JSON: asignaturas, calendario escolar y datos de cada grupo
 └── types/                  # Tipos compartidos (Clase, Horario, Evento…)
+supabase/migrations/        # El esquema de la base de datos, en SQL versionado
 docs/                       # Esta documentación y sus capturas
 scripts/desplegar.mjs       # npm run deploy: compila y publica en S3 + CloudFront
 public/sonidos/             # Kits de sonido (audio sprites .ogg/.m4a + mapa JSON)
@@ -193,10 +202,10 @@ Para añadir otro grupo: crear `src/data/grupos/<grupo>/` con su `horario.json` 
 
 ## Estado actual y limitaciones
 
-Es una **versión 1 solo de frontend**. Lo que conviene saber:
+Es una **versión 1** con un backend recién estrenado. Lo que conviene saber:
 
 - **Solo hay datos de DAW 1º A.** Los demás grupos muestran un aviso de "sin datos".
-- **Las cuentas no existen todavía:** el formulario exige datos pero no los valida ni los guarda (no hay base de datos).
+- **Las cuentas son reales, pero el panel aún no depende de ellas:** sigue mostrando el horario y los exámenes del JSON. Las tareas propias y las de Moodle llegarán en los siguientes pasos.
 - **Datos de prueba:** `examenes.json` incluye entregas **inventadas** (5, 6, 9, 10, 12, 17 y 25 de noviembre; 1 y 3 de diciembre) para probar la Agenda. Hay que quitarlas cuando lleguen las fechas reales.
 - **Sin sonido hasta el primer clic:** es la política de autoplay de los navegadores; el audio arranca con el primer clic o tecla.
 - **Pendiente conocido:** los módulos apagados se guardan con una clave común a todos los grupos.
@@ -205,19 +214,27 @@ Es una **versión 1 solo de frontend**. Lo que conviene saber:
 
 ## Hoja de ruta
 
-### Versión 2: sincronización automática
-El calendario de exámenes del centro se lleva en Microsoft 365 (Excel o Word en la web). La idea es leerlo con la **API de Microsoft Graph** en lugar de copiarlo a mano.
+### Ahora: las entregas de las plataformas del instituto
+El objetivo es que cada alumno vea **todas sus entregas juntas**, vengan de donde vengan. Tras investigar cada plataforma ([docs/INTEGRACIONES.md](docs/INTEGRACIONES.md)):
 
-A tener en cuenta:
-- Hace falta iniciar sesión con la cuenta del centro (autenticación con Microsoft).
-- El centro puede bloquear que los alumnos registren aplicaciones.
-- Implica algo de backend y gestión de credenciales.
+| Plataforma | Cómo se integra |
+|---|---|
+| Moodle del centro (aula.iesmontenaranco.com) | API oficial de Moodle, con un token |
+| Moodle "Mis Aulas" (aulas2.site) | API apagada → la misma vía interna que usa su web, con la contraseña cifrada |
+| Microsoft Teams (Educastur) | No se puede automatizar (Educastur bloquea las apps externas) → **tareas añadidas a mano** |
 
-Alternativas más sencillas: que el calendario se comparta como Excel/CSV o como calendario `.ics`.
+Hecho: backend en Supabase, tabla `entregas` con RLS y login y registro reales.
+
+Pendiente, en este orden:
+1. Formulario para añadir tareas a mano.
+2. Conectar Moodle (método A).
+3. Sincronización cada 30 minutos.
+4. Método B.
 
 ### Otras ideas
-- Cuentas de usuario reales y datos de todos los grupos.
-- Tareas propias además de las generadas.
+- Datos de todos los grupos.
+- Teams automático con el calendario ICS o Power Automate (aparcado, ver [INTEGRACIONES.md §4](docs/INTEGRACIONES.md#4-teams-qué-se-ha-probado-y-por-qué-no-se-puede-automatizar)).
+- Política de privacidad antes de abrirlo a más alumnos.
 - Despliegue automático en cada `push` (GitHub Actions → S3).
 - Tests automáticos (las comprobaciones de este proyecto se hicieron con scripts de Puppeteer fuera del repositorio).
 
@@ -226,6 +243,8 @@ Alternativas más sencillas: que el calendario se comparta como Excel/CSV o como
 ## Documentación detallada
 
 - **[docs/PROCESO.md](docs/PROCESO.md):** cómo se hizo, paso a paso: las fases, las decisiones de diseño, los mayores retos técnicos y lo aprendido.
+- **[docs/BACKEND.md](docs/BACKEND.md):** el backend con Supabase: por qué, cómo se montó, la tabla `entregas`, la seguridad (claves, permisos, RLS), el login y las pruebas.
+- **[docs/INTEGRACIONES.md](docs/INTEGRACIONES.md):** la investigación para leer las entregas de Moodle y Teams, cómo se llegó a cada conclusión y el plan.
 - **[docs/ARQUITECTURA.md](docs/ARQUITECTURA.md):** cómo está hecho por dentro: flujo de datos, cada módulo y cada técnica (z-buffer, shaders, dithering, ScrollTrigger, Web Audio…).
 
 ---

@@ -28,6 +28,7 @@ export function PanelLogo({ onNavegar, className = '' }: Props) {
 
   return (
     <Panel
+      tutorial="logo"
       etiqueta="Accesos: alvaro.cloud, login, ajustes y web del instituto"
       className={`h-64 bg-transparent! sm:h-80 lg:h-auto ${className}`}
       fondo={<Logo3D zonas={ZONAS} onZona={alPulsar} className="size-full" />}

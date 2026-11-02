@@ -15,6 +15,7 @@ import { sonar, viento } from './lib/sonido'
 import { Aviso } from './components/ui/Aviso'
 import { CortinaPixel, type FaseCortina } from './components/ui/CortinaPixel'
 import { FondoPuntos } from './components/ui/FondoPuntos'
+import { Tutorial } from './components/ui/Tutorial'
 import { Cabecera } from './components/sections/Cabecera'
 import { HorarioSemanal } from './components/sections/HorarioSemanal'
 import { PanelLogo } from './components/sections/PanelLogo'
@@ -129,7 +130,7 @@ function App() {
             excluidas={permanentes}
             onAlternar={alternarPermanente}
             onRestablecer={restablecer}
-            onVolver={(o) => navegar('panel', o)}
+            onNavegar={navegar}
             avisar={avisar}
           />
         ) : ruta === 'entrar' || ruta === 'crear' ? (
@@ -180,6 +181,8 @@ function App() {
                 className="md:col-span-2 lg:col-span-8 lg:col-start-1 lg:row-start-2"
               />
             </motion.main>
+            {/* Solo la primera vez, al llegar de la configuración guiada de Ajustes */}
+            <Tutorial />
           </div>
         )}
       </Suspense>

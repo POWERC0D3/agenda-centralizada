@@ -2,7 +2,7 @@
 
 Este documento cuenta **cómo se hizo** Monte Naranco Agenda Digital: las fases por las que pasó, las decisiones de diseño (incluidas las que se descartaron), los mayores retos técnicos y lo aprendido por el camino.
 
-El proyecto se desarrolló entre el **28 y el 30 de octubre de 2026** como proyecto de aprendizaje de frontend. El autor venía de Java (backend) y era su primer proyecto con React, TypeScript, Tailwind y librerías de animación. Se programó con ayuda de IA (Claude Code), con una regla clara: **entender cada paso, no solo terminar la web**.
+El proyecto se desarrolló entre el **28 de octubre y el 2 de noviembre de 2026** como proyecto de aprendizaje de frontend. El autor venía de Java (backend) y era su primer proyecto con React, TypeScript, Tailwind y librerías de animación. Se programó con ayuda de IA (Claude Code), con una regla clara: **entender cada paso, no solo terminar la web**.
 
 > Para la parte técnica (cómo está organizado el código y cómo funciona cada pieza) ver [ARQUITECTURA.md](ARQUITECTURA.md).
 
@@ -169,6 +169,23 @@ En las dos, el nombre de la asignatura va en su color. Como los exámenes solo t
 - el calendario deja de alargar la página;
 - el logo **gira con el giroscopio** al inclinar el teléfono.
 
+### Día 4 (2 de noviembre): integraciones, primer backend y la primera visita
+
+**Investigar antes de programar.** El siguiente objetivo era que la agenda leyera sola las entregas de las plataformas del instituto: dos Moodle y Microsoft Teams, que es donde están 6 de las asignaturas. Antes de escribir código, el autor investigó qué permite cada una, con scripts de PowerShell y sus propias cuentas. El resultado, en [INTEGRACIONES.md](INTEGRACIONES.md):
+- el Moodle del centro se puede leer con su **API oficial**;
+- el otro tiene la API apagada, pero se puede leer por la **misma vía interna que usa su web**;
+- **Teams no se puede leer automáticamente,** porque Educastur bloquea cualquier app externa. Sus tareas se añadirán a mano.
+
+Ver [3.11](#311-investigar-antes-de-programar-moodle-y-teams).
+
+**El primer backend: Supabase.** Para guardar credenciales, ejecutar código fuera del navegador y sincronizar cada cierto tiempo hacía falta un backend. Se eligió **Supabase**: Postgres, autenticación, funciones y tareas programadas sin mantener ningún servidor. Se crearon el proyecto, la primera **migración** (la tabla `entregas` con sus políticas de seguridad) y el **login y el registro reales**, que sustituyen al formulario de muestra. Todo en [BACKEND.md](BACKEND.md) y en [3.12](#312-el-primer-backend).
+
+**La landing, sin barra.** Se quitó la barra superior de la landing (logo, "Volver al panel" y "Entrar"). La única salida es ahora la propia tarjeta de cuenta: entrar, registrarse o, si ya tienes la sesión iniciada, ir al panel. El botón de Ajustes pasó de "Volver al panel" a **"Ir al panel"**.
+
+**La primera visita, guiada** (ver [3.13](#313-la-primera-visita-configuración-guiada-y-tutorial)):
+- **Configuración guiada:** tras registrarse, Ajustes no aparece entero. Las secciones salen **una a una con un fade-in** (cuenta → grupo → módulos → sonido → sincronizar) según se elige algo en la anterior.
+- **Tutorial del panel:** al pulsar "Ir al panel" desde esa configuración, un **recuadro ilumina cada parte del panel** y oscurece el resto mientras una tarjeta explica para qué sirve. Son 5 pasos y unos 15 segundos.
+
 ---
 
 ## 3. Los mayores retos técnicos
@@ -289,7 +306,7 @@ La última petición fue "optimízalo, pero no te cargues nada". Se hizo así:
    - `assets/`, con hash en el nombre: un año, inmutable;
    - sonidos e iconos: un día.
 3. Sube `index.html` **al final**, sin caché. Así nunca hay un `index.html` nuevo apuntando a archivos que aún no existen.
-4. Vacía la caché de `index.html` en CloudFront.
+4. Vacía la caché de CloudFront con `/*`. Al principio solo se vaciaba `index.html`, pero el favicon y los sonidos, que conservan su nombre, podían seguir viejos hasta un día. Un comodín cuenta como una sola ruta gratuita.
 
 Los assets antiguos no se borran: alguien con la web abierta puede pedir todavía un trozo diferido de la versión anterior.
 
@@ -313,6 +330,50 @@ Probando la web en el teléfono aparecieron cuatro problemas que en escritorio n
    - La primera prueba dijo que "no hacía nada", pero era la prueba la que no tocaba la pantalla. Después, inclinando a un lado y a otro, se midió en la perspectiva de las puertas del logo (0,76 frente a 1,31).
 
 De paso apareció un fallo antiguo: entre 768 y 1024 px, el lienzo de la lupa sobresalía de la pantalla y creaba scroll horizontal. Se recortó con `overflow-x: clip` solo en ese rango.
+
+### 3.11 Investigar antes de programar: Moodle y Teams
+
+El reto no era técnico sino de **saber qué está permitido**. El método:
+1. **Primero lo oficial:** la API de Moodle y Microsoft Graph.
+2. **Después, lo que hace la propia web:** la vía interna de Moodle.
+3. **Descartar** lo que vaya contra las normas o dependa de terceros.
+
+Los hallazgos clave:
+- **Se puede saber cómo está configurado un Moodle sin arriesgar ninguna cuenta.** Su configuración pública y un intento de token con datos falsos responden con errores distintos según la API esté encendida (`invalidlogin`) o apagada (`enablewsdescription`).
+- **Cuando la API está apagada, la propia web sigue necesitando los datos,** y los pide por `lib/ajax/service.php` con la sesión del usuario. Usar esa vía da el mismo resultado, pero es más frágil y exige la contraseña. Por eso queda aislada como "método B".
+- **Teams no depende de la técnica, sino de una política.** Educastur tiene desactivado el consentimiento de usuario, así que ninguna app externa puede conseguir un token de Graph. Se evaluaron siete alternativas. Las que quedan en pie (calendario ICS y Power Automate) dependen de terceros o están sin probar, así que la v1 lo resuelve **a mano**.
+
+El proceso completo está en [INTEGRACIONES.md §8](INTEGRACIONES.md#8-cómo-se-llegó-a-estas-conclusiones).
+
+### 3.12 El primer backend
+
+Lo nuevo no era programar, sino **cambiar la forma de pensar la seguridad**. Sin un servidor propio que filtre las peticiones, la web habla directamente con la base de datos a través de una API, y la clave para hacerlo es **pública**: está en el JavaScript y en el repositorio. La protección pasa a la propia base de datos:
+- **Las tablas nacen cerradas:** el proyecto se creó sin exponer tablas nuevas automáticamente y con RLS automático.
+- **Dos cerrojos por tabla:**
+  - **permisos por rol:** `anon` no tiene ninguno y `authenticated` solo los necesarios;
+  - **RLS:** `(select auth.uid()) = user_id` en cada operación.
+- **La prueba que importa:** pedir la tabla **sin sesión**, con la clave pública. Lo que podría hacer cualquiera. Respuesta: `permission denied`.
+
+**Migraciones versionadas:** los cambios de la base de datos son archivos SQL en el repositorio (`supabase/migrations/`) y se aplican con la CLI, nunca a mano en el panel. Así el repositorio describe la base de datos real, como Flyway en Java.
+
+**Tropiezos y decisiones:**
+- La CLI v3 aplica las migraciones a una base de datos **local** por defecto, y sin Docker falla. Hay que pedir `--remote` a propósito, y antes un `--dry-run`.
+- Las credenciales (token de la CLI, contraseña de la base de datos) las introdujo siempre el autor en su terminal. La IA trabajó con la CLI ya autorizada, sin ver nunca las claves.
+- Para el servidor MCP de Supabase se recomendó **solo lectura**: los cambios, por migración.
+- `supabase-js` (56 kB) solo se carga en la landing y Ajustes, que ya iban aparte, así que el panel no creció.
+
+Todo el detalle en [BACKEND.md](BACKEND.md).
+
+### 3.13 La primera visita: configuración guiada y tutorial
+
+**Configuración guiada.** Al registrarse se guarda una marca en `sessionStorage`. Ajustes la lee al abrirse y solo enseña la primera sección. La siguiente aparece al **tocar una opción** de la actual o al pulsar **"Continuar"**, porque las opciones por defecto pueden ser ya las buenas.
+- **Para que no dé saltos:** la página se alinea arriba mientras dura la guía (centrada, cada sección nueva empujaría las anteriores hacia arriba) y baja sola hasta la sección nueva.
+- **El fade-in se midió:** la opacidad pasa de 0 a 1 en unos 0,5 s.
+- **Un aviso del linter:** al principio cada sección se guardaba con un `ref` creado durante el render, y la regla de React lo rechazó. Ahora cada sección lleva un `data-paso` y se busca después de pintar.
+
+**Tutorial del panel.** Es una sola caja con una **sombra gigante** (`box-shadow: 0 0 0 9999px`) que oscurece todo menos su interior. Para ir de una sección a otra basta con animar su posición y su tamaño. Cada sección se localiza por un atributo `data-tutorial`, y la tarjeta se coloca debajo, encima o dentro según el espacio.
+- **En el móvil** el Calendario es más alto que la pantalla y el borde del recuadro se salía de ella. Ahora el recuadro se recorta a la pantalla y el marco siempre se ve.
+- **Solo pasa una vez:** las dos marcas se borran al terminar, y lo comprueba una recarga en la prueba automática.
 
 ---
 
@@ -360,6 +421,9 @@ Las animaciones tienen dirección y significado:
 | Efecto de escritura con un `<span>` por letra | Provocaba tirones (~82 ms de layout): se rehízo con la "pluma" de `textContent`. |
 | Pie de página de la landing | Sobraba; los créditos están en este repositorio. |
 | El tejado del logo como acceso a "Registro" | Registrarse ya se puede desde la landing; el tejado pasó a llevar a la web madre (alvaro.cloud). |
+| Barra superior en la landing ("Volver al panel" y "Entrar") | No hacía falta: la tarjeta de cuenta ya es la entrada y, con sesión, lleva al panel. |
+| Leer Teams con su contraseña o con la API interna de Teams | Va contra las condiciones de uso de Educastur y supone guardar contraseñas de Microsoft de menores (ver [INTEGRACIONES.md §4.2](INTEGRACIONES.md#42-opciones-evaluadas)). |
+| Spring Boot o Express para el backend | Un servidor que mantener encendido. Supabase da lo mismo sin servidor propio. |
 | "Ver más" para acortar el calendario en móvil | Habría escondido pruebas a las que se salta al pulsar un día del mes: se usó altura máxima con scroll. |
 
 ---
@@ -402,6 +466,11 @@ Esos scripts vivieron fuera del repositorio. Pasarlos a tests automáticos es un
 - **El criterio sigue siendo humano.** Las mejores correcciones vinieron del autor: "antes del cambio no pasaba", "suena demasiado fuerte", "sobrecarga demasiado". Notar eso es el trabajo.
 - **La IA también se equivoca:** una vez pasó Prettier con una configuración que no era la del proyecto y cambió el estilo de un archivo entero. Se detectó y se deshizo. Revisar los diffs importa.
 
+**Sobre backend:**
+- **Investigar antes de programar.** Una tarde de pruebas con scripts evitó construir una integración con Teams que nunca habría funcionado.
+- **En un backend como servicio, la seguridad vive en la base de datos.** La clave pública es pública. Lo que protege son los permisos y el RLS, y se demuestra intentando leer sin sesión.
+- **El esquema también es código:** migraciones versionadas, ensayo con `--dry-run` y nunca cambios a mano en producción.
+
 **Sobre publicar:**
 - **Comprobar el resultado, no el proceso.** Un "subido" y un "Completed" no garantizan nada: la subida a alvaro.cloud terminó sin errores con el archivo equivocado. Solo leer lo que de verdad había en el bucket lo destapó.
 - **Probar en el dispositivo real.** El escritorio no avisó de nada; el teléfono, de cuatro cosas. Y algunas no se pueden comprobar del todo con un emulador, como el giroscopio de un móvil de verdad.
@@ -410,11 +479,13 @@ Esos scripts vivieron fuera del repositorio. Pasarlos a tests automáticos es un
 
 ## 8. Resultado final
 
-A 30 de octubre de 2026 la web está **publicada en [agenda.alvaro.cloud](https://agenda.alvaro.cloud)** y es:
+A 2 de noviembre de 2026 la web está **publicada en [agenda.alvaro.cloud](https://agenda.alvaro.cloud)** y es:
 
 - **Un panel de una pantalla:** horario con lupa de cristal, calendario de exámenes y escolar, agenda diaria generada y logo 3D interactivo como menú (que en el móvil gira con el giroscopio).
-- **Una página de ajustes:** grupo, módulos, sonido y sincronización (de muestra).
-- **Una landing animada con el scroll** que explica el concepto y termina en un login y un registro de muestra, que llevan al panel o a Ajustes.
+- **Una página de ajustes:** cuenta, grupo, módulos, sonido y sincronización (de muestra). La primera vez se configura **paso a paso**.
+- **Una landing animada con el scroll** que explica el concepto y termina en un **login y un registro reales** (Supabase Auth): el login lleva al panel y el registro a la configuración guiada.
+- **Un tutorial de 5 pasos** la primera vez que se entra al panel.
+- **Un backend en marcha:** Supabase con la tabla `entregas` protegida con RLS, lista para las tareas a mano y la sincronización con Moodle.
 - **Adaptable:** apilada en móvil, con su propia vista del horario, y sin scroll en escritorio.
 - **Sin servidores:** S3 + CloudFront, se paga solo por uso, y se publica con `npm run deploy`.
 - **Respetuosa con el movimiento reducido**, usable con teclado y con sonido opcional.

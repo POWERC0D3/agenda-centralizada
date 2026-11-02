@@ -13,6 +13,8 @@ type Props = {
   /** Capa que ocupa TODA la celda por detrás de la cabecera (p. ej. el logo) */
   fondo?: ReactNode
   className?: string
+  /** Nombre de la celda para el tutorial del panel (data-tutorial): el foco la busca por él */
+  tutorial?: string
   /** Clases para el cuerpo (p. ej. scroll interno) */
   cuerpo?: string
   children?: ReactNode
@@ -25,13 +27,14 @@ type Props = {
  * El borde es una sombra de 1px (no un `border`): así dos celdas vecinas
  * comparten la misma línea en vez de sumar 2px.
  */
-export function Panel({ titulo, etiqueta, ayuda, extra, fondo, className = '', cuerpo = '', children }: Props) {
+export function Panel({ titulo, etiqueta, ayuda, extra, fondo, className = '', cuerpo = '', tutorial, children }: Props) {
   const id = useId()
   return (
     <motion.section
       variants={aparecer}
       aria-labelledby={titulo ? `${id}-t` : undefined}
       aria-label={titulo ? undefined : etiqueta}
+      data-tutorial={tutorial}
       className={`relative flex min-h-0 flex-col bg-fondo/90 shadow-[0_0_0_1px_var(--color-linea)] ${className}`}
     >
       {fondo && <div className="absolute inset-0">{fondo}</div>}
