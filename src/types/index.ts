@@ -35,6 +35,8 @@ export type Evento = {
   id?: string
   /** De qué web viene ("Aula virtual"…). Sin fuente = de los datos del propio proyecto (el JSON) */
   fuente?: string
+  /** 'moodle': sincronizada (si sigue ahí, está sin entregar); 'manual': añadida a mano (no sabemos si se entregó) */
+  origen?: 'moodle' | 'manual'
 }
 
 /** Un evento ya "calculado" respecto a hoy */
@@ -55,15 +57,3 @@ export type CalendarioEscolar = {
 }
 
 export type TipoDiaEscolar = 'festivo' | 'no-lectivo' | 'vacaciones' | 'inicio' | 'fin'
-
-/** Una fecha señalada del calendario escolar, ya calculada respecto a hoy (como EventoConDias) */
-export type EntradaEscolar = {
-  id: string
-  tipo: TipoDiaEscolar
-  nombre: string
-  inicio: Date
-  fin: Date // igual que `inicio` si es un solo día
-  dias: number // días hasta `inicio` (negativo si ya empezó)
-  motivo?: string // por qué no hay clase, cuando se sabe pero no hay web que lo explique
-  url?: string // web que explica ese día (si la hay)
-}

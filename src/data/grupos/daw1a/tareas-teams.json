@@ -1,0 +1,7 @@
+[
+  { "id": "teams-ejemplo-1", "fecha": "2026-11-06", "asignatura": "PROG",  "tipo": "entrega", "detalle": "Práctica 4: arrays y bucles",                  "fuente": "Teams", "origen": "manual", "url": "https://teams.microsoft.com/" },
+  { "id": "teams-ejemplo-2", "fecha": "2026-11-12", "asignatura": "LMSGI", "tipo": "entrega", "detalle": "Ejercicios de XML bien formado",                "fuente": "Teams", "origen": "manual", "url": "https://teams.microsoft.com/" },
+  { "id": "teams-ejemplo-3", "fecha": "2026-11-17", "asignatura": "SISIN", "tipo": "entrega", "detalle": "Informe: Ubuntu Server en VirtualBox",          "fuente": "Teams", "origen": "manual", "url": "https://teams.microsoft.com/" },
+  { "id": "teams-ejemplo-4", "fecha": "2026-11-25", "asignatura": "ENDES", "tipo": "entrega", "detalle": "Diagrama de clases UML del caso práctico",      "fuente": "Teams", "origen": "manual", "url": "https://teams.microsoft.com/" },
+  { "id": "teams-ejemplo-5", "fecha": "2026-11-27", "asignatura": "IPEI",  "tipo": "entrega", "detalle": "Currículum Europass y carta de presentación",   "fuente": "Teams", "origen": "manual", "url": "https://teams.microsoft.com/" }
+]

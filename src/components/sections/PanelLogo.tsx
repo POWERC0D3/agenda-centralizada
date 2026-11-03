@@ -1,4 +1,4 @@
-import type { Ruta } from '../../hooks/useRuta'
+import type { Navegar, Ruta } from '../../hooks/useRuta'
 import { URL_CENTRO, URL_ORIGEN } from '../../lib/config'
 import { Logo3D, type ZonaLogo } from '../ui/Logo3D'
 import { Panel } from '../ui/Panel'
@@ -13,7 +13,7 @@ const ZONAS: ZonaLogo[] = [
 ]
 
 type Props = {
-  onNavegar: (ruta: Ruta, centro: { x: number; y: number }) => void
+  onNavegar: Navegar
   className?: string
 }
 

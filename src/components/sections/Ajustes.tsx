@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
-import type { Ruta } from '../../hooks/useRuta'
-import { borrarCuenta, cerrarSesion, useSesion } from '../../hooks/useSesion'
+import type { Navegar } from '../../hooks/useRuta'
+import { borrarCuenta, cerrarSesion, repetirBienvenida, useSesion } from '../../hooks/useSesion'
 import { useSonido } from '../../hooks/useSonido'
 import { colorAsignatura, nombreAsignatura } from '../../lib/datos'
-import { nombreGrupo, type Grupo } from '../../lib/grupos'
+import { datosDelGrupo, nombreGrupo, SOLO_CONFIGURADOS, type Grupo } from '../../lib/grupos'
 import type { Excluidas } from '../../lib/horario'
 import { guardarPasoBienvenida, pasoBienvenida, pedirTutorial, terminarBienvenida } from '../../lib/bienvenida'
+import { centroDe } from '../../lib/dom'
 import { aparecer, cascada } from '../../lib/movimiento'
 import { activarSonido, cambiarVolumen, sonar } from '../../lib/sonido'
 import { LogoMarca } from '../ui/LogoMarca'
 import { ConexionMoodle } from './ConexionMoodle'
 import { ElegirGrupo } from './ElegirGrupo'
+import { TareasManuales } from './TareasManuales'
 
 type Props = {
   /** Los módulos del grupo elegido (vacío si aún no hay datos de ese grupo) */
@@ -22,7 +24,7 @@ type Props = {
   onAlternar: (id: string) => void
   onRestablecer: () => void
   /** Ir a otra página con la cortina: volver al panel o iniciar sesión */
-  onNavegar: (ruta: Ruta, centro: { x: number; y: number }) => void
+  onNavegar: Navegar
   avisar: (texto: string) => void
 }
 
@@ -66,8 +68,8 @@ function Grupo({ titulo, descripcion, children, guiada = false, onContinuar, pas
   )
 }
 
-// Configuración guiada: orden de las secciones. Tras la última aparece el botón "Ir al panel"
-const PASOS = ['cuenta', 'grupo', 'modulos', 'sonido', 'sincronizar'] as const
+// Configuración guiada: orden de las secciones (el mismo en que se pintan). Tras la última aparece el botón "Ir al panel"
+const PASOS = ['grupo', 'modulos', 'sonido', 'sincronizar', 'cuenta'] as const
 const FIN = PASOS.length
 
 /**
@@ -79,39 +81,14 @@ function columnasEquilibradas(n: number, max: number) {
   return Math.ceil(n / filas)
 }
 
-/** Botón grande de cuenta externa: aún no conecta, solo avisa. */
-function BotonCuenta({ nombre, detalle, onClick }: { nombre: string; detalle: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        sonar('disabled', { x: e.clientX }) // aún no disponible: sonido "apagado" + aviso
-        onClick()
-      }}
-      className="group flex w-full items-center justify-between gap-4 border border-linea bg-fondo-alto/60 px-5 py-4 text-left transition-colors hover:border-tinta/40 hover:bg-fondo-alto"
-    >
-      <span>
-        <span className="block font-medium">{nombre}</span>
-        <span className="block text-xs text-tinta-suave">{detalle}</span>
-      </span>
-      <span className="flex items-center gap-3 text-xs text-tinta-suave">
-        Próximamente
-        <span className="transition-transform duration-300 ease-salida group-hover:translate-x-1">→</span>
-      </span>
-    </button>
-  )
-}
-
 /** Página aparte, minimalista: módulos que cursas y cuentas para sincronizar. */
 export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRestablecer, onNavegar, avisar }: Props) {
   const sonido = useSonido()
-  const { usuario, nombre, cargando } = useSesion()
+  const { usuario, nombre, bienvenidaPendiente, cargando } = useSesion()
   const [borrando, setBorrando] = useState<null | 'pregunta' | 'borrando'>(null)
+  const [marcandoBienvenida, setMarcandoBienvenida] = useState(false)
+  const [saliendo, setSaliendo] = useState(false) // cerrando sesión: el botón no se puede pulsar dos veces
   const reducido = useReducedMotion()
-  const centro = (el: HTMLElement) => {
-    const r = el.getBoundingClientRect()
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
-  }
 
   // ── Configuración guiada (solo la primera vez, al venir del registro) ──
   // `paso` = la última sección visible. Sin configuración guiada, todo visible desde el principio (FIN)
@@ -145,82 +122,9 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
           </p>
         </motion.header>
 
-        <Grupo
-          paso={0}
-          titulo="Tu cuenta"
-          descripcion="Con tu cuenta podrás añadir tus propias tareas y verlas en cualquier dispositivo."
-          onContinuar={continuar('cuenta')}
-        >
-          <div className="flex min-h-14 flex-wrap items-center justify-between gap-4 border border-linea bg-fondo-alto/60 px-5 py-4">
-            {cargando ? (
-              <span className="text-sm text-tinta-suave">Comprobando…</span>
-            ) : usuario ? (
-              <>
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{nombre || usuario.email}</span>
-                  {nombre && <span className="block truncate text-xs text-tinta-suave">{usuario.email}</span>}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    sonar('toggle_off')
-                    void cerrarSesion().then(() => avisar('Has cerrado sesión'))
-                  }}
-                  className="border border-linea px-3.5 py-1.5 text-sm transition-colors hover:border-coral hover:text-coral"
-                >
-                  Cerrar sesión
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="text-sm text-tinta-suave">Sin sesión: tus ajustes solo se guardan en este navegador.</span>
-                <button
-                  type="button"
-                  onClick={(e) => onNavegar('entrar', centro(e.currentTarget))}
-                  className="border border-linea px-3.5 py-1.5 text-sm transition-colors hover:border-arena hover:text-arena"
-                >
-                  Iniciar sesión
-                </button>
-              </>
-            )}
-          </div>
-          {/* Derecho de supresión (RGPD): borrar la cuenta y todo lo suyo. Dos pasos para que no sea sin querer */}
-          {usuario && (
-            <div className="mt-3 flex flex-wrap items-center justify-end gap-3 text-xs">
-              {borrando === 'pregunta' && <span className="text-coral">Se borrarán tu cuenta y todos tus datos. ¿Seguro?</span>}
-              <button
-                type="button"
-                disabled={borrando === 'borrando'}
-                onClick={() => {
-                  if (borrando !== 'pregunta') {
-                    sonar('caution', { volumen: 0.5 })
-                    setBorrando('pregunta')
-                    return
-                  }
-                  setBorrando('borrando')
-                  borrarCuenta()
-                    .then(() => avisar('Tu cuenta y todos tus datos se han borrado'))
-                    .catch((e: Error) => {
-                      avisar(e.message)
-                      setBorrando(null)
-                    })
-                }}
-                className="text-tinta-suave underline-offset-4 transition-colors hover:text-coral hover:underline disabled:opacity-50"
-              >
-                {borrando === 'pregunta' ? 'Sí, borrar mi cuenta' : borrando === 'borrando' ? 'Borrando…' : 'Borrar mi cuenta'}
-              </button>
-              {borrando === 'pregunta' && (
-                <button type="button" onClick={() => setBorrando(null)} className="text-tinta-suave hover:text-tinta">
-                  Cancelar
-                </button>
-              )}
-            </div>
-          )}
-        </Grupo>
-
         {ve('grupo') && (
           <Grupo
-            paso={1}
+            paso={0}
             guiada={guiada}
             titulo="Tu grupo"
             descripcion="Ciclo, curso y grupo: de esto dependen el horario y el calendario de exámenes que ves."
@@ -231,6 +135,7 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
               onCambio={(g) => {
                 onGrupo(g)
                 avanzar('grupo')
+                if (!datosDelGrupo(g)) avisar(`${SOLO_CONFIGURADOS}: ${nombreGrupo(g)} aún no tiene horario ni exámenes`)
               }}
             />
           </Grupo>
@@ -238,7 +143,7 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
 
         {ve('modulos') && (
           <Grupo
-            paso={2}
+            paso={1}
             guiada={guiada}
             onContinuar={continuar('modulos')}
             titulo="Tus módulos"
@@ -293,7 +198,7 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
 
         {ve('sonido') && (
           <Grupo
-            paso={3}
+            paso={2}
             guiada={guiada}
             onContinuar={continuar('sonido')}
             titulo="Sonido"
@@ -362,24 +267,99 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
 
         {ve('sincronizar') && (
           <Grupo
-            paso={4}
+            paso={3}
             guiada={guiada}
             onContinuar={continuar('sincronizar')}
             titulo="Sincronizar"
             descripcion="Trae tus entregas de las plataformas del instituto a la agenda, sin copiarlas a mano."
           >
             <div className="space-y-2">
-              <ConexionMoodle sitio="centro" haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
-              <ConexionMoodle sitio="misaulas" haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
-              <BotonCuenta
-                nombre="Teams"
-                detalle="Educastur no deja conectar apps: podrás añadir sus tareas a mano"
-                onClick={() => {
-                  avisar('Añadir tareas a mano llegará pronto')
-                  avanzar('sincronizar')
-                }}
-              />
+              <ConexionMoodle sitio="centro" modulos={modulos} haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
+              <ConexionMoodle sitio="misaulas" modulos={modulos} haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
+              <TareasManuales modulos={modulos} haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
             </div>
+          </Grupo>
+        )}
+
+        {ve('cuenta') && (
+          <Grupo
+            paso={4}
+            guiada={guiada}
+            titulo="Tu cuenta"
+            descripcion="Con tu cuenta podrás añadir tus propias tareas y verlas en cualquier dispositivo."
+            onContinuar={continuar('cuenta')}
+          >
+            <div className="flex min-h-14 flex-wrap items-center justify-between gap-4 border border-linea bg-fondo-alto/60 px-5 py-4">
+              {cargando ? (
+                <span className="text-sm text-tinta-suave">Comprobando…</span>
+              ) : usuario ? (
+                <>
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{nombre || usuario.email}</span>
+                    {nombre && <span className="block truncate text-xs text-tinta-suave">{usuario.email}</span>}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={saliendo}
+                    onClick={(e) => {
+                      sonar('toggle_off')
+                      setSaliendo(true)
+                      // El centro se calcula YA: cuando acabe el await, el evento ya no tiene currentTarget
+                      const origen = centroDe(e.currentTarget)
+                      // Primero se cierra la sesión y después se va al login: si no, el login vería aún la sesión
+                      // y enseñaría "Has iniciado sesión como…" en vez del formulario
+                      void cerrarSesion().then(() => onNavegar('entrar', origen, 'Has cerrado sesión'))
+                    }}
+                    className="border border-linea px-3.5 py-1.5 text-sm transition-colors hover:border-coral hover:text-coral disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {saliendo ? 'Cerrando…' : 'Cerrar sesión'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm text-tinta-suave">Sin sesión: tus ajustes solo se guardan en este navegador.</span>
+                  <button
+                    type="button"
+                    onClick={(e) => onNavegar('entrar', centroDe(e.currentTarget))}
+                    className="border border-linea px-3.5 py-1.5 text-sm transition-colors hover:border-arena hover:text-arena"
+                  >
+                    Iniciar sesión
+                  </button>
+                </>
+              )}
+            </div>
+            {/* Derecho de supresión (RGPD): borrar la cuenta y todo lo suyo. Dos pasos para que no sea sin querer */}
+            {usuario && (
+              <div className="mt-3 flex flex-wrap items-center justify-end gap-3 text-xs">
+                {borrando === 'pregunta' && <span className="text-coral">Se borrarán tu cuenta y todos tus datos. ¿Seguro?</span>}
+                <button
+                  type="button"
+                  disabled={borrando === 'borrando'}
+                  onClick={() => {
+                    if (borrando !== 'pregunta') {
+                      sonar('caution', { volumen: 0.5 })
+                      setBorrando('pregunta')
+                      return
+                    }
+                    setBorrando('borrando')
+                    borrarCuenta()
+                      .then(() => avisar('Tu cuenta y todos tus datos se han borrado'))
+                      .catch((e: Error) => {
+                        avisar(e.message)
+                        setBorrando(null)
+                      })
+                  }}
+                  className="text-tinta-suave underline-offset-4 transition-colors hover:text-coral hover:underline disabled:opacity-50"
+                >
+                  {borrando === 'pregunta' ? 'Sí, borrar mi cuenta' : borrando === 'borrando' ? 'Borrando…' : 'Borrar mi cuenta'}
+                </button>
+                {borrando === 'pregunta' && (
+                  <button type="button" onClick={() => setBorrando(null)} className="text-tinta-suave hover:text-tinta">
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            )}
           </Grupo>
         )}
 
@@ -395,12 +375,36 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
               type="button"
               onClick={(e) => {
                 if (guiada) pedirTutorial() // acaba de configurarlo todo por primera vez: el panel le enseñará cómo funciona
-                onNavegar('panel', centro(e.currentTarget))
+                onNavegar('panel', centroDe(e.currentTarget))
               }}
               className="bg-tinta px-6 py-3 text-sm font-medium text-fondo transition-colors hover:bg-arena"
             >
               Ir al panel
             </button>
+            {/* Repetir la bienvenida en el próximo inicio de sesión, sin perder nada (va en la cuenta: hace falta sesión) */}
+            {usuario && (
+              <p className="mt-5 text-xs text-tinta-suave">
+                {bienvenidaPendiente && 'La próxima vez que inicies sesión verás otra vez la configuración guiada y el tutorial. '}
+                <button
+                  type="button"
+                  disabled={marcandoBienvenida}
+                  onClick={() => {
+                    const si = !bienvenidaPendiente
+                    sonar(si ? 'toggle_on' : 'toggle_off')
+                    setMarcandoBienvenida(true)
+                    repetirBienvenida(si)
+                      .then(() =>
+                        avisar(si ? 'Hecho: al volver a iniciar sesión repasarás la configuración, con tus datos tal cual' : 'Cancelado'),
+                      )
+                      .catch((e: Error) => avisar(e.message))
+                      .finally(() => setMarcandoBienvenida(false))
+                  }}
+                  className="text-tinta-suave underline underline-offset-4 transition-colors hover:text-tinta disabled:opacity-50"
+                >
+                  {bienvenidaPendiente ? 'Cancelar' : 'Repetir la configuración y el tutorial en el próximo inicio de sesión'}
+                </button>
+              </p>
+            )}
           </motion.div>
         )}
       </motion.div>

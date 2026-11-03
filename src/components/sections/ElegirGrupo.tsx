@@ -1,4 +1,4 @@
-import { ajustarGrupo, CICLOS, CURSOS, datosDelGrupo, letrasDe, type Grupo } from '../../lib/grupos'
+import { ajustarGrupo, CICLOS, CURSOS, datosDelGrupo, letrasDe, SOLO_CONFIGURADOS, type Grupo } from '../../lib/grupos'
 import { Carrusel } from '../ui/Carrusel'
 
 type Props = { grupo: Grupo; onCambio: (g: Grupo) => void }
@@ -24,7 +24,7 @@ export function ElegirGrupo({ grupo, onCambio }: Props) {
       </div>
       <p className={`mt-3 flex items-center gap-2 text-xs ${hayDatos ? 'text-tinta' : 'text-tinta-suave'}`}>
         <span className={`size-1.5 ${hayDatos ? 'bg-verde' : 'bg-linea'}`} aria-hidden="true" />
-        {hayDatos ? 'Horario y exámenes cargados' : 'Aún sin horario ni exámenes de este grupo: llegarán desde la base de datos'}
+        {hayDatos ? 'Horario y exámenes cargados' : `Aún sin horario ni exámenes de este grupo. ${SOLO_CONFIGURADOS}.`}
       </p>
     </div>
   )

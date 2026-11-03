@@ -2,12 +2,13 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion, type Variants } from 'motion/react'
 import type { EventoConDias, Horario } from '../../types'
 import { useHechas } from '../../hooks/useHechas'
-import { colorAsignatura } from '../../lib/datos'
+import { colorAsignatura, nombreAsignatura } from '../../lib/datos'
 import { diasEntre, diaSemana, isoLocal, NOMBRES_DIA, textoCuentaAtras } from '../../lib/fechas'
 import type { Excluidas } from '../../lib/horario'
 import { EASE_SALIDA } from '../../lib/movimiento'
 import { sonar } from '../../lib/sonido'
-import { tareasDelDia, type Prioridad, type Tarea } from '../../lib/tareas'
+import { abrirTarea } from '../../lib/abrir'
+import { deLasClasesDelDia, tareasDelDia, type Prioridad, type Tarea } from '../../lib/tareas'
 import { Panel } from '../ui/Panel'
 import { Escritura } from '../ui/Escritura'
 import { SinDatos } from '../ui/SinDatos'
@@ -131,28 +132,6 @@ function Casilla({ marcada }: { marcada: boolean }) {
   )
 }
 
-/**
- * Abre una tarea en su web. Si es una entrega de la cuenta, pide al servidor el enlace con inicio de sesión
- * automático (Moodle del centro); si no se puede, el enlace normal.
- * La pestaña se abre YA, dentro del clic: los navegadores bloquean las ventanas que se abren después de esperar
- * una respuesta. Se abre en blanco y, cuando llega el enlace, se le cambia la dirección.
- */
-function abrirTarea(url: string, entregaId?: string) {
-  if (!entregaId) {
-    window.open(url, '_blank', 'noopener,noreferrer')
-    return
-  }
-  const ventana = window.open('about:blank', '_blank')
-  if (ventana) ventana.opener = null // la pestaña nueva no puede tocar esta página (como noopener)
-  import('../../lib/moodle')
-    .then((m) => m.enlaceDeTarea(entregaId))
-    .catch(() => url) // sin red o error: el enlace normal
-    .then((destino) => {
-      if (ventana) ventana.location.href = destino
-      else window.open(destino, '_blank', 'noopener,noreferrer')
-    })
-}
-
 function FilaTarea({
   t,
   hecha,
@@ -236,7 +215,7 @@ function FilaTarea({
   )
 }
 
-// Cambiar de día: el plan se desliza hacia el lado al que avanzas (como Exámenes/Escolar en el Calendario).
+// Cambiar de día: el plan se desliza hacia el lado al que avanzas (como Exámenes/Entregas en el Calendario).
 // `dir` llega por `custom` desde AnimatePresence, también al plan que ya se está yendo.
 const PLAN: Variants = {
   entra: (dir: number) => ({ x: dir * 36, opacity: 0 }),
@@ -249,13 +228,14 @@ type PropsPlan = {
   fecha: Date
   horario: Horario
   lista: EventoConDias[]
+  foco: string | null
   excluidas: Excluidas
   cargando: boolean
   dir: number // 1: se avanza de día; -1: se vuelve atrás
 }
 
 /** El plan de UN día, con sus tareas marcadas y su propia medida de lo que cabe. */
-function PlanDelDia({ ahora, fecha, horario, lista, excluidas, cargando, dir }: PropsPlan) {
+function PlanDelDia({ ahora, fecha, horario, lista, foco, excluidas, cargando, dir }: PropsPlan) {
   const iso = isoLocal(fecha)
   const esHoy = iso === isoLocal(ahora)
   const { hechas, alternar } = useHechas(iso)
@@ -284,9 +264,13 @@ function PlanDelDia({ ahora, fecha, horario, lista, excluidas, cargando, dir }: 
     return () => ro.disconnect()
   }, [zona, medidor])
 
-  // Por ahora, solo lo que viene de las webs del instituto (Moodle…); para volver a las tareas deducidas
-  // de los exámenes y el horario, quitar el último `true`
-  const todas = tareasDelDia(horario, fecha, lista, excluidas, true)
+  // Exámenes y entregas mezclados, por prioridad; para volver a añadir los hábitos del horario
+  // (repartir el repaso, dudas, material), quitar el último `true`
+  const pendientes = tareasDelDia(horario, fecha, lista, excluidas, true)
+  // Y de ellas, solo las de las asignaturas que tienen clase ese día (o que vencen ese día).
+  // Con una asignatura en foco, NO: la lista ya llega filtrada por ella, y los dos filtros a la vez la dejaban
+  // vacía en los días sin clase suya. Elegir una asignatura = ver todo lo suyo, sea el día que sea
+  const todas = foco ? pendientes : deLasClasesDelDia(pendientes, horario, fecha, excluidas)
   // El plan del día: las de más prioridad que caben (las hechas siguen dentro, al final)
   const tareas = todas.slice(0, cabe)
   const ordenadas = [...tareas.filter((t) => !hechas.has(t.id)), ...tareas.filter((t) => hechas.has(t.id))]
@@ -354,7 +338,18 @@ function PlanDelDia({ ahora, fecha, horario, lista, excluidas, cargando, dir }: 
           >
             {todas.length === 0 ? (
               <p className="py-8 text-center text-sm text-tinta-suave">
-                <Escritura texto={esHoy ? 'Hoy no tienes nada pendiente. Descansa.' : 'Nada pendiente para este día.'} />
+                <Escritura
+                  texto={
+                    // Que no parezca que no hay nada cuando lo que pasa es que hay un filtro puesto
+                    foco
+                      ? `No tienes nada pendiente de ${nombreAsignatura(foco)}.`
+                      : pendientes.length > 0
+                        ? `Nada de las asignaturas de ${esHoy ? 'hoy' : 'este día'}. Lo demás, en el Calendario.`
+                        : esHoy
+                          ? 'Hoy no tienes nada pendiente. Descansa.'
+                          : 'Nada pendiente para este día.'
+                  }
+                />
               </p>
             ) : (
               // Hueco que llenar: lo que deja libre la celda (de alto fijo en todos los tamaños)
@@ -392,14 +387,15 @@ type Props = {
   fecha: Date // el día que se mira (lo elige la lupa del horario)
   horario: Horario | null
   grupo: string
-  lista: EventoConDias[] // pruebas vistas desde `fecha`
+  lista: EventoConDias[] // pruebas vistas desde `fecha` (con una asignatura en foco, solo las suyas)
+  foco?: string | null // la asignatura elegida en el horario: con ella no se filtra por las clases del día
   excluidas: Excluidas
   onHoy: () => void
   className?: string
 }
 
 /** La agenda del día: lo que tienes que hacer, por prioridad, y lo que llevas hecho. */
-export function Agenda({ ahora, fecha, horario, grupo, lista, excluidas, onHoy, className = '' }: Props) {
+export function Agenda({ ahora, fecha, horario, grupo, lista, foco = null, excluidas, onHoy, className = '' }: Props) {
   // Estado de "carga": al montar, la agenda finge que la IA está preparando el plan
   const [cargando, setCargando] = useState(() => !sinAnimacion())
   const iso = isoLocal(fecha)
@@ -438,7 +434,7 @@ export function Agenda({ ahora, fecha, horario, grupo, lista, excluidas, onHoy, 
     titulo: 'Agenda',
     tutorial: 'agenda',
     ayuda:
-      'Tu plan del día: lo que tienes que estudiar y hacer, ordenado por prioridad según tus exámenes y entregas. Márcalo cuando lo termines. Con la lupa del horario puedes ver el de otro día.',
+      'Tu plan del día: lo que tienes que estudiar y hacer, ordenado por prioridad según tus exámenes y entregas. Márcalo cuando lo termines. Con la lupa del horario puedes ver el de otro día; si eliges una asignatura, todo lo suyo.',
     extra: !esHoy && (
       <button
         type="button"
@@ -472,7 +468,17 @@ export function Agenda({ ahora, fecha, horario, grupo, lista, excluidas, onHoy, 
       cuerpo="grid grid-rows-[minmax(0,1fr)] overflow-hidden"
     >
       <AnimatePresence initial={false} custom={dir}>
-        <PlanDelDia key={iso} ahora={ahora} fecha={fecha} horario={horario} lista={lista} excluidas={excluidas} cargando={cargando} dir={dir} />
+        <PlanDelDia
+          key={iso}
+          ahora={ahora}
+          fecha={fecha}
+          horario={horario}
+          lista={lista}
+          foco={foco}
+          excluidas={excluidas}
+          cargando={cargando}
+          dir={dir}
+        />
       </AnimatePresence>
     </Panel>
   )

@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { motion } from 'motion/react'
-import { irA, type Ruta } from '../../hooks/useRuta'
-import { cerrarSesion, useSesion } from '../../hooks/useSesion'
+import { irA, type Navegar } from '../../hooks/useRuta'
+import { cerrarSesion, repetirBienvenida, useSesion } from '../../hooks/useSesion'
 import { empezarBienvenida } from '../../lib/bienvenida'
+import { centroDe } from '../../lib/dom'
 import { EASE_SALIDA } from '../../lib/movimiento'
 import { sonar } from '../../lib/sonido'
 import { mensajeDeError, supabase } from '../../lib/supabase'
@@ -29,7 +30,7 @@ function Campo({ etiqueta, nombre, tipo, autocompletar, minimo }: PropsCampo) {
         minLength={minimo}
         autoComplete={autocompletar}
         onFocus={() => sonar('tap', { volumen: 0.4 })}
-        className="w-full border border-linea bg-fondo px-3 py-2.5 text-sm transition-colors outline-none focus:border-arena user-invalid:border-coral"
+        className="w-full border border-linea bg-fondo px-3 py-2.5 text-sm transition-colors outline-none focus:border-verde user-invalid:border-coral"
       />
     </label>
   )
@@ -37,21 +38,19 @@ function Campo({ etiqueta, nombre, tipo, autocompletar, minimo }: PropsCampo) {
 
 type Props = {
   modo: ModoCuenta
-  /** Adónde ir al terminar (con la cortina desde el botón): entrar → panel; crear cuenta → ajustes.
-   *  `mensaje` se enseña al llegar */
-  onAcceder: (destino: Ruta, centro: { x: number; y: number }, mensaje: string) => void
+  /** Adónde ir al terminar (con la cortina desde el botón): entrar → panel; crear cuenta → ajustes */
+  onAcceder: Navegar
   className?: string
 }
 
-const centroDe = (el: Element) => {
-  const r = el.getBoundingClientRect()
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
-}
+
+// Botón principal de la tarjeta: el verde del logo, que sobre el papel de la landing (tema claro) es el color de acción
+const BOTON = 'w-full bg-verde py-3 text-sm font-semibold text-white transition-colors hover:bg-tinta'
 
 /**
  * La tarjeta de cuenta, conectada a Supabase Auth. Crear cuenta lleva a Ajustes (para elegir grupo y
  * módulos antes de empezar); iniciar sesión, al panel. Si ya hay sesión, enseña quién eres.
- * En la landing sube y sustituye a la lista.
+ * En la landing sube y sustituye a la lista. Solo vive ahí, así que sus colores son los del tema claro.
  */
 export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
   const crear = modo === 'crear'
@@ -89,7 +88,13 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
         const { data, error } = await supabase.auth.signInWithPassword({ email: correo, password: clave })
         if (error) throw error
         const quien = (data.user.user_metadata?.nombre as string | undefined) || correo
-        onAcceder('panel', centro, `Hola de nuevo, ${quien}`)
+        if (data.user.user_metadata?.repetir_bienvenida === true) {
+          // Pidió repetir la configuración y el tutorial: se hace UNA vez, así que la marca se borra ya.
+          // Sus datos no se tocan: Ajustes los enseña paso a paso tal y como están
+          void repetirBienvenida(false).catch(() => {}) // si falla, como mucho se repetirá en el siguiente inicio
+          empezarBienvenida()
+          onAcceder('ajustes', centro, `Hola de nuevo, ${quien}: repasemos tu configuración`)
+        } else onAcceder('panel', centro, `Hola de nuevo, ${quien}`)
       }
       // `enviando` se queda en true: la página cambia y esta tarjeta desaparece
     } catch (err) {
@@ -105,7 +110,7 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
   return (
     <div
       id="acceso"
-      className={`w-full border border-arena/50 bg-fondo-alto p-5 shadow-[0_0_60px_-15px_color-mix(in_oklab,var(--color-arena)_45%,transparent)] sm:p-6 ${className}`}
+      className={`w-full border border-t-[3px] border-linea border-t-verde bg-fondo-alto p-5 shadow-2xl shadow-tinta/15 sm:p-6 ${className}`}
     >
       {conSesion ? (
         <div className="space-y-5 py-2 text-center">
@@ -116,8 +121,8 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
           </p>
           <button
             type="button"
-            onClick={(e) => onAcceder('panel', centroDe(e.currentTarget), '')}
-            className="w-full bg-arena py-3 text-sm font-semibold text-oscuro-fijo transition-colors hover:bg-tinta"
+            onClick={(e) => onAcceder('panel', centroDe(e.currentTarget))}
+            className={BOTON}
           >
             Ir al panel
           </button>
@@ -151,7 +156,7 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
                 {modo === p.modo && (
                   <motion.span
                     layoutId="pestana-cuenta"
-                    className="absolute inset-x-0 -bottom-px h-0.5 bg-arena"
+                    className="absolute inset-x-0 -bottom-px h-0.5 bg-verde"
                     transition={{ duration: 0.35, ease: EASE_SALIDA }}
                   />
                 )}
@@ -183,14 +188,14 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
             <button
               type="submit"
               disabled={enviando || cargando}
-              className="mt-2 w-full bg-arena py-3 text-sm font-semibold text-oscuro-fijo transition-colors hover:bg-tinta disabled:cursor-wait disabled:opacity-60"
+              className={`mt-2 ${BOTON} disabled:cursor-wait disabled:opacity-60`}
             >
               {enviando ? (crear ? 'Creando cuenta…' : 'Entrando…') : crear ? 'Crear cuenta' : 'Entrar'}
             </button>
             {crear && (
               <p className="text-center text-xs leading-relaxed text-tinta-suave">
                 Al crear la cuenta aceptas la{' '}
-                <a href="#/privacidad" className="text-tinta underline underline-offset-4 hover:text-arena">
+                <a href="#/privacidad" className="text-tinta underline underline-offset-4 hover:text-verde">
                   política de privacidad
                 </a>
                 .

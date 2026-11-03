@@ -163,9 +163,10 @@ Supabase
  ├─ Auth ............ sustituye el login/registro de mentira de la landing
  ├─ PostgreSQL + RLS  cada usuario solo ve sus filas
  ├─ Edge Functions (TypeScript)
- │    ├─ conectar-moodle  → detecta el método (§3.1), valida y guarda la conexión
- │    └─ sincronizar      → para cada conexión, lee la Línea de tiempo y actualiza `entregas`
- └─ pg_cron ......... lanza `sincronizar` cada ~30 min
+ │    ├─ conectar-moodle   → detecta el método (§3.1), valida y guarda la conexión
+ │    ├─ sincronizar       → las conexiones de un alumno ("Sincronizar ahora")
+ │    └─ sincronizar-todo  → las de todos; solo la llama pg_cron, con un secreto de Vault
+ └─ pg_cron ......... lanza `sincronizar-todo` cada 30 min
 ```
 
 Equivalencias con Java: Edge Function ≈ un endpoint suelto de un controller; RLS ≈ un `WHERE user_id = ?` obligatorio que pone la base de datos; `pg_cron` ≈ `@Scheduled`.
@@ -204,7 +205,7 @@ cursos_asignaturas (conexion_id uuid, curso_moodle_id int, asignatura_id text)
 ### 5.2 Encaje con el frontend actual
 
 - Cada fila de `entregas` se convierte en un `Evento` (`src/types/index.ts`) con `tipo: 'entrega'` y `url`. El campo `url` ya estaba previsto como "futuro backend". La Agenda, el Calendario y `tareasDelDia` las tratarían como ya hacen con las entregas del JSON.
-- Las tareas de Teams añadidas a mano también van a `entregas` (`origen = 'teams-manual'`).
+- Las tareas de Teams añadidas a mano también van a `entregas`. Al implementarlo quedó como `origen = 'manual'` + `plataforma = 'Teams'`, para que el formulario sirva para cualquier plataforma ([BACKEND.md §12.3](BACKEND.md#123-tareas-de-teams-a-mano)).
 - "Hecha": hoy está en `localStorage` (`useHechas`). Con backend puede pasar a la columna `hecha` para que se sincronice entre dispositivos.
 - El login y el registro de la landing (`Acceso.tsx`, `Hero.tsx`) pasarían a usar Supabase Auth.
 
@@ -242,10 +243,10 @@ Decisiones tomadas (2 nov 2026): arquitectura del §5 confirmada; modo **delegar
 1. [x] Confirmar la arquitectura (§5) y el modo de trabajo.
 2. [x] Crear el proyecto de Supabase y la tabla `entregas` con RLS (`supabase/migrations/`).
 3. [x] Pasar el login y el registro de la landing a Supabase Auth.
-4. [ ] Formulario rápido para añadir tareas de Teams a mano (enlace + título + fecha) y convertir `entregas` en `Evento` en el frontend.
+4. [x] Formulario para añadir tareas de Teams a mano (título, fecha, asignatura y enlace opcional) en Ajustes → Sincronizar; las filas de `entregas` se convierten en `Evento` en el frontend (`useEntregasCuenta`).
 5. [x] Tabla `conexiones_moodle` (token cifrado con AES-GCM en las Edge Functions) + Edge Function `conectar-moodle`, método A.
-6. [~] Edge Function `sincronizar` (hecha, con botón "Sincronizar ahora"). Falta el `pg_cron` cada 30 minutos.
-7. [~] Ajustes → Sincronizar: conectar, sincronizar y desconectar Moodle. La asignatura de cada curso se adivina por su nombre (`cursos_moodle`); falta poder corregirla desde la web.
+6. [x] Edge Function `sincronizar` (botón "Sincronizar ahora") y `pg_cron` cada 30 minutos con `sincronizar-todo` (Mis Aulas, como mucho cada 2 horas).
+7. [x] Ajustes → Sincronizar: conectar, sincronizar y desconectar Moodle. La asignatura de cada curso se adivina por su nombre y se puede corregir en "Cursos y asignaturas".
 8. [x] Método B (aulas2.site): inicio de sesión web en cada sincronización, con la contraseña cifrada (AES-GCM, la misma llave que los tokens). Comprobado sin credenciales que un login fallido también trae `sesskey`: el éxito se detecta por el enlace de `login/logout.php`.
 9. [ ] Más adelante: volver a mirar Teams con Power Automate (§4.4) o con el calendario (§4.3).
 
@@ -299,5 +300,8 @@ Leer Moodle necesita **guardar credenciales** (tokens, y en el método B la cont
 | "Tu cuenta" en Ajustes, con cerrar sesión | [BACKEND.md §8](BACKEND.md#8-cómo-lo-usa-el-frontend) |
 | Pruebas de seguridad: sin sesión no se lee ni se escribe | [BACKEND.md §9](BACKEND.md#9-pruebas-realizadas) |
 
-**Siguiente:** el formulario para añadir tareas a mano (paso 4 del §7).
+| Moodle del centro (método A) y Mis Aulas (método B), con abrir cada tarea con la sesión iniciada | [BACKEND.md §11](BACKEND.md#11-lo-añadido-después-2-nov-2026) y [§12](BACKEND.md#12-sincronización-automática-cursos-y-tareas-a-mano-3-nov-2026) |
+| Sincronización automática cada 30 minutos, corrección de asignaturas y tareas de Teams a mano | [BACKEND.md §12](BACKEND.md#12-sincronización-automática-cursos-y-tareas-a-mano-3-nov-2026) |
+
+**Siguiente:** volver a mirar Teams automático (paso 9 del §7) cuando haya ocasión de probar Power Automate o algún profesor active el calendario.
 

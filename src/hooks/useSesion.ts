@@ -27,10 +27,28 @@ export function useSesion() {
   const usuario = sesion?.user ?? null
   // El nombre se guarda al registrarse en los metadatos del usuario (user_metadata)
   const nombre = (usuario?.user_metadata?.nombre as string | undefined) ?? null
-  return { sesion, usuario, nombre, cargando }
+  const bienvenidaPendiente = usuario?.user_metadata?.repetir_bienvenida === true
+  return { sesion, usuario, nombre, bienvenidaPendiente, cargando }
 }
 
-export const cerrarSesion = () => supabase.auth.signOut()
+/**
+ * Cierra la sesión. Si el servidor no responde (sin red), Supabase devuelve un error y NO la borra:
+ * en ese caso se olvida al menos en este navegador (scope local), porque quien pulsa "Cerrar sesión" espera salir.
+ */
+export async function cerrarSesion(): Promise<void> {
+  const { error } = await supabase.auth.signOut()
+  if (error) await supabase.auth.signOut({ scope: 'local' })
+}
+
+/**
+ * Marca (o desmarca) la cuenta para que el próximo inicio de sesión repita la configuración guiada y el tutorial.
+ * Va en los metadatos del usuario, como el nombre: es de la cuenta (vale en cualquier dispositivo) y no
+ * necesita tabla. Con `null` Supabase borra la clave en vez de guardar `false`.
+ */
+export async function repetirBienvenida(si: boolean): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ data: { repetir_bienvenida: si || null } })
+  if (error) throw new Error('No se pudo guardar. Inténtalo de nuevo')
+}
 
 /** Borra la cuenta y todos sus datos (Edge Function borrar-cuenta) y cierra la sesión. */
 export async function borrarCuenta(): Promise<void> {

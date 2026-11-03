@@ -1,6 +1,7 @@
 import type { Evento, Horario } from '../types'
 import daw1aExamenes from '../data/grupos/daw1a/examenes.json'
 import daw1aHorario from '../data/grupos/daw1a/horario.json'
+import daw1aTeams from '../data/grupos/daw1a/tareas-teams.json'
 
 export const CICLOS = ['DAW', 'DAM'] as const
 export const CURSOS = ['1º', '2º'] as const
@@ -23,7 +24,7 @@ const MODULOS_DAM_2 = ['AD', 'DI', 'PMDM', 'PSP', 'SGE', 'IPEII', 'PIDM']
  * Los grupos que existen de verdad en el centro (A = mañana, B = tarde) y sus módulos.
  * No todas las combinaciones de ciclo × curso × letra existen: DAM 1º solo tiene tarde, 2º solo un grupo por ciclo.
  */
-export const GRUPOS: { grupo: Grupo; modulos: string[] }[] = [
+const GRUPOS: { grupo: Grupo; modulos: string[] }[] = [
   { grupo: { ciclo: 'DAW', curso: '1º', letra: 'A' }, modulos: MODULOS_1 },
   { grupo: { ciclo: 'DAW', curso: '1º', letra: 'B' }, modulos: MODULOS_1 },
   { grupo: { ciclo: 'DAM', curso: '1º', letra: 'B' }, modulos: MODULOS_1 },
@@ -34,7 +35,7 @@ export const GRUPOS: { grupo: Grupo; modulos: string[] }[] = [
 const buscar = (g: Grupo) => GRUPOS.find((x) => x.grupo.ciclo === g.ciclo && x.grupo.curso === g.curso && x.grupo.letra === g.letra)
 
 /** ¿Existe este grupo en el centro? */
-export const existeGrupo = (g: Grupo) => buscar(g) !== undefined
+const existeGrupo = (g: Grupo) => buscar(g) !== undefined
 
 /** Los módulos de un grupo (vacío si el grupo no existe). */
 export const modulosDeGrupo = (g: Grupo): string[] => buscar(g)?.modulos ?? []
@@ -53,15 +54,17 @@ export function ajustarGrupo(g: Grupo): Grupo {
   return letra ? { ...g, letra } : GRUPO_INICIAL
 }
 
-export const idGrupo = (g: Grupo) => `${g.ciclo}${g.curso.charAt(0)}${g.letra}`.toLowerCase() // "daw1a"
+const idGrupo = (g: Grupo) => `${g.ciclo}${g.curso.charAt(0)}${g.letra}`.toLowerCase() // "daw1a"
 export const nombreGrupo = (g: Grupo) => `${g.ciclo} ${g.curso} ${g.letra}`
 
 export type DatosGrupo = { horario: Horario; eventos: Evento[] }
 
 // De momento los datos viven en el propio proyecto y solo hay los de DAW 1º A.
 // TypeScript infiere `tipo: string` en los JSON: por eso el `as`.
+// Las tareas de Teams son DE EJEMPLO (inventadas): enseñan cómo se ven, porque Teams no se puede leer solo.
+// Van detrás de los exámenes y con id propio, para no cambiar el id calculado de ningún examen
 const DISPONIBLES: Record<string, DatosGrupo> = {
-  daw1a: { horario: daw1aHorario as Horario, eventos: daw1aExamenes as Evento[] },
+  daw1a: { horario: daw1aHorario as Horario, eventos: [...daw1aExamenes, ...daw1aTeams] as Evento[] },
 }
 
 /**
@@ -72,3 +75,8 @@ const DISPONIBLES: Record<string, DatosGrupo> = {
 export function datosDelGrupo(g: Grupo): DatosGrupo | null {
   return DISPONIBLES[idGrupo(g)] ?? null
 }
+
+// Sale de los datos, no está escrito a mano: al añadir un grupo a DISPONIBLES, el aviso se actualiza solo
+const conDatos = GRUPOS.filter((x) => datosDelGrupo(x.grupo)).map((x) => nombreGrupo(x.grupo))
+/** "De momento solo está configurado DAW 1º A" (para avisar al elegir un grupo que aún no tiene datos) */
+export const SOLO_CONFIGURADOS = `De momento solo ${conDatos.length === 1 ? 'está configurado' : 'están configurados'} ${conDatos.join(', ')}`

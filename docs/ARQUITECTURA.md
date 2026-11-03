@@ -73,7 +73,8 @@ La separación importa: **toda la lógica de fechas, horario, eventos y tareas s
 | `ahora` | `useAhora()`: la hora actual (o la simulada con `?ahora=`), cada 30 s | Horario, Calendario, Agenda |
 | `ruta` | `useRuta()`: el hash de la URL | Decide qué página se ve |
 | `grupo` | `useGrupo()`: el grupo elegido, en `localStorage` | Datos que se cargan |
-| `excluidos` / `permanentes` | `useModulos()`: módulos apagados (temporales + permanentes) | Todo: lo que no cursas no llega a ningún panel |
+| `excluidos` | `useModulos()`: módulos que no cursas (apagados en Ajustes) | Todo: lo que no cursas no llega a ningún panel |
+| `foco` | `useState` en `App`: la asignatura elegida con un clic en el horario (solo memoria). `focoValido` es derivado: deja de valer solo si cambias de grupo o la apagas | Horario (la ilumina), Agenda y Calendario (solo lo suyo). La cabecera no |
 | `elegida` | Estado local: la fecha bajo la lupa (texto ISO) o `null` = hoy | Horario (lupa) y Agenda (día que enseña) |
 
 ### Valores derivados (se calculan en cada render, no se guardan)
@@ -166,7 +167,7 @@ Todas las lecturas y escrituras van en `try/catch`: en una ventana privada o con
 | `fechas.ts` | Fechas en **hora local** (nunca UTC) y formatos en español | `parseFecha`, `isoLocal`, `lunesDe`, `sumarDias`, `diasEntre`, `mismoDia`, `horaAMinutos`, `textoCuentaAtras` |
 | `datos.ts` | Catálogo de asignaturas y calendario escolar | `nombreAsignatura`, `nombreCompleto`, `colorAsignatura` |
 | `horario.ts` | El horario semanal | `clasesDelDia`, `franjas`, `modulosDe` |
-| `escolar.ts` | El calendario escolar como índice por día | `infoDia`, `esLectivo`, `clasesDeLaFecha`, `proximaClase`, `entradasEscolares`, `INICIO`, `FIN` |
+| `escolar.ts` | El calendario escolar como índice por día | `infoDia`, `esLectivo`, `clasesDeLaFecha`, `proximaClase`, `INICIO`, `FIN` |
 | `eventos.ts` | Exámenes y entregas respecto a hoy | `eventosConDias`, `eventosVisibles`, `agruparPorSemana`, `proximoEvento`, `urlDe` |
 | `tareas.ts` | Genera las tareas de la Agenda | `tareasDelDia` |
 | `grupos.ts` | Los grupos que existen (`GRUPOS`: DAW 1º A/B, DAM 1º B, DAW 2º A, DAM 2º B) con sus módulos, y el acceso a sus datos | `GRUPOS`, `modulosDeGrupo`, `letrasDe`, `ajustarGrupo`, `datosDelGrupo` |
@@ -205,7 +206,7 @@ Cada tarea tiene un **id estable** (`entrega-<id>`, `dudas-PROG`…). Por eso se
 |---|---|---|
 | `useAhora(ms)` | La hora actual, refrescada cada `ms` | Con `?ahora=` aplica un desfase fijo: el reloj simulado avanza normalmente |
 | `useRuta()` | La página actual según el hash | `useSyncExternalStore` |
-| `useModulos()` | Módulos apagados: `permanentes` (Ajustes, `localStorage`), temporales (clic en el horario, solo memoria) y `excluidos` = la unión | Devuelve `Set` nuevos para que React detecte el cambio por referencia |
+| `useModulos()` | Módulos que no cursas (`excluidos`, desde Ajustes, en `localStorage` y en la cuenta) | Devuelve `Set` nuevos para que React detecte el cambio por referencia |
 | `useGrupo()` | Grupo elegido, recordado entre visitas | |
 | `useHechas(dia)` | Tareas hechas de un día concreto | Si cambia el día con la web abierta, lee la nueva lista ("ajustar el estado durante el render") |
 | `useSesion()` | Quién ha iniciado sesión (`usuario`, `nombre`, `cargando`) y `cerrarSesion()` | Se suscribe a `supabase.auth.onAuthStateChange` (patrón Observer): se entera también desde otra pestaña |
@@ -223,9 +224,9 @@ Cada tarea tiene un **id estable** (`entrega-<id>`, `dudas-PROG`…). Por eso se
 | Componente | Qué es |
 |---|---|
 | `Cabecera` | Barra superior en rejilla `1fr auto 1fr`, para que el título quede centrado de verdad. Tiene su propio reloj de 1 s: solo ella se re-renderiza cada segundo. Las cifras usan `Odometro`. Las dos cuentas atrás se definen una vez y se colocan en dos sitios: a los lados del título (desde `md`) o en una segunda fila (móvil). |
-| `HorarioSemanal` | Rejilla de la semana: días en columnas, franjas en filas, recreo. Cada bloque (`BloqueClase`) tiene estados: normal, ahora, pasada, convalidada (hueco rayado), temporalmente apagada (borde discontinuo), atenuada (fuera de la lupa). Los días sin clase quedan en penumbra salvo bajo la lupa. Gestiona la rueda (con *throttle*), las flechas y el hover de asignatura. Monta `LupaCristal`, cuyo margen se recorta con `overflow-x: clip` entre `md` y `lg`. **En móvil:** pestañas por día y una lista de **periodos**: cada clase mide sus periodos × 3,5 rem, con una línea discontinua en cada cambio de hora, y los periodos sin clase en mitad del día aparecen como "Libre". |
-| `Calendario` | Modos *Exámenes* y *Escolar* con `AnimatePresence`. Mes navegable (limitado a meses con información ±1), lista agrupada por semanas y filtros con subrayado animado (`layoutId`). Pulsar un día del mes hace `scrollIntoView` hasta su prueba. Por debajo de `lg` la lista tiene `max-h` y scroll propio (`overscroll-contain`). |
-| `Agenda` | El plan del día: cabecera ("Jueves 12 · Hoy · 0/7"), estado de "pensando", tareas con `Escritura` y casillas. En escritorio, el "taco" isométrico. |
+| `HorarioSemanal` | Rejilla de la semana: días en columnas, franjas en filas, recreo. Cada bloque (`BloqueClase`) tiene estados: normal, ahora, pasada, convalidada (hueco rayado), en foco (encendida con su color) u otra con una en foco (en penumbra), atenuada (fuera de la lupa). Los días sin clase quedan en penumbra salvo bajo la lupa. Gestiona la rueda (con *throttle*), las flechas y el hover de asignatura. Monta `LupaCristal`, cuyo margen se recorta con `overflow-x: clip` entre `md` y `lg`. **En móvil:** pestañas por día y una lista de **periodos**: cada clase mide sus periodos × 3,5 rem, con una línea discontinua en cada cambio de hora, y los periodos sin clase en mitad del día aparecen como "Libre". |
+| `Calendario` | Pestañas *Exámenes* (por defecto) y *Entregas* con subrayado animado (`layoutId`) y cambio deslizado con `AnimatePresence`. Mes navegable (limitado a meses con información ±1); sin tocar las flechas, abre en el mes de lo próximo de la pestaña (estado derivado: `vista = null`). Lista agrupada por semanas. Pulsar un día del mes hace `scrollIntoView` hasta su prueba. Por debajo de `lg` la lista tiene `max-h` y scroll propio (`overscroll-contain`). |
+| `Agenda` | El plan del día: cabecera ("Jueves 12 · Hoy · 0/7"), estado de "pensando", tareas con `Escritura` y casillas. `tareasDelDia` saca exámenes y entregas y `deLasClasesDelDia` deja solo las de las asignaturas que ese día de la semana tienen en el horario (manda el horario, no el calendario escolar: un miércoles no lectivo filtra como cualquier miércoles) o que vencen ese día. En escritorio, el "taco" isométrico. |
 | `PanelLogo` | El `Logo3D` con sus zonas: tejado → *Origen* (alvaro.cloud, otra pestaña), puerta central → *Login*, derecha → *Ajustes*, izquierda → web del instituto (otra pestaña). |
 | `Ajustes` | Página de ajustes: cuenta, grupo, módulos, sonido y sincronización. **Configuración guiada** la primera vez (tras registrarse): las secciones aparecen una a una con un fade-in, al tocar una opción de la actual o pulsar "Continuar", y al final el botón "Ir al panel". El paso va en `sessionStorage` (`lib/bienvenida.ts`), así que si se recarga a mitad sigue donde estaba, y al terminar se borra. |
 | `ElegirGrupo` | Los tres `Carrusel` (ciclo, curso, grupo). |
@@ -250,7 +251,7 @@ Cada tarea tiene un **id estable** (`entrega-<id>`, `dudas-PROG`…). Por eso se
 | `Escritura` | Texto que se escribe letra a letra sin coste de *layout*. |
 | `Odometro` | Números que ruedan como un cuentakilómetros (cada cifra en su "ventanita"). |
 | `Carrusel<T>` | Selector circular genérico: flechas, rueda, arrastre y teclado. |
-| `EnlaceExterno` | Enlace con ↗ que solo se ve al pasar el ratón (en dispositivos con hover). |
+| `EnlaceExterno` | Enlace con ↗ que solo se ve al pasar el ratón (en dispositivos con hover). Con `onAbrir`, el clic normal lo gestiona la web (p. ej. `abrirTarea`, que abre Moodle con la sesión iniciada); Ctrl/⌘/Mayús o el botón central siguen siendo un enlace normal. |
 | `Tutorial` | Tutorial del panel, solo tras la configuración guiada (marca `agenda:tutorial` en `sessionStorage`). Cada paso busca su celda por `data-tutorial` (prop `tutorial` de `Panel`) y la rodea con un recuadro cuya sombra `0 0 0 9999px` oscurece el resto de la pantalla. El recuadro se anima de una celda a otra, se recorta a la pantalla y la tarjeta se coloca debajo, encima o dentro según el espacio. Avanza con clic, → o Enter; Esc lo cierra. |
 | `CuentaAtras`, `Aviso`, `LogoMarca`, `SinDatos` | Etiqueta de días restantes, toast, logo SVG pequeño y estado vacío. |
 

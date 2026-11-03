@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { MotionConfig, motion, useReducedMotion } from 'motion/react'
 import { useAhora } from './hooks/useAhora'
 import { useAviso } from './hooks/useAviso'
@@ -8,14 +8,17 @@ import { useAjustesEnLaNube } from './hooks/useAjustesEnLaNube'
 import { useHaySesion } from './hooks/useHaySesion'
 import { borrarHechasLocales } from './hooks/useHechas'
 import { useModulos } from './hooks/useModulos'
-import { irA, useRuta, type Ruta } from './hooks/useRuta'
+import { irA, useRuta, type Navegar, type Ruta } from './hooks/useRuta'
 import { useSonido } from './hooks/useSonido'
+import { pedirFormulario } from './lib/acceso'
 import { nombreAsignatura } from './lib/datos'
 import { eventosVisibles } from './lib/eventos'
+import type { EventoConDias } from './types'
 import { diaSemana, fechaDeLaSemana, inicioDelDia, isoLocal, lunesDe, mismoDia, parseFecha } from './lib/fechas'
 import { datosDelGrupo, GRUPO_INICIAL, modulosDeGrupo, nombreGrupo } from './lib/grupos'
 import { cascada } from './lib/movimiento'
 import { fijarConfigSonido, sonar, viento } from './lib/sonido'
+import { aplicarTema } from './lib/tema'
 import { Aviso } from './components/ui/Aviso'
 import { CortinaPixel, type FaseCortina } from './components/ui/CortinaPixel'
 import { FondoPuntos } from './components/ui/FondoPuntos'
@@ -35,37 +38,36 @@ const Landing = lazy(() => cargarLanding().then((m) => ({ default: m.Landing }))
 // La política de privacidad: se lee poco, así que ni siquiera se precarga
 const Privacidad = lazy(() => import('./components/sections/Privacidad').then((m) => ({ default: m.Privacidad })))
 
-type Origen = { x: number; y: number }
 
 function App() {
   const ahora = useAhora()
   const ruta = useRuta()
-  const { excluidos, permanentes, alternarTemporal, alternarPermanente, restablecer, establecerPermanentes } = useModulos()
+  const { excluidos, alternar, restablecer, establecer } = useModulos()
   const { aviso, avisar } = useAviso()
   const { grupo, setGrupo } = useGrupo()
   const sonido = useSonido()
 
   // Ajustes en la cuenta: lo mismo en todos los dispositivos (sin sesión, solo en este navegador).
-  // Los módulos apagados con un clic en el horario NO van: son temporales a propósito
+  // La asignatura elegida con un clic en el horario NO va: es solo para este momento, a propósito
   const ajustesCuenta = useMemo(
     () => ({
       grupo: { ciclo: grupo.ciclo, curso: grupo.curso, letra: grupo.letra },
-      modulos: [...permanentes].sort(),
+      modulos: [...excluidos].sort(),
       sonido: { activo: sonido.activo, volumen: sonido.volumen },
     }),
-    [grupo, permanentes, sonido],
+    [grupo, excluidos, sonido],
   )
   useAjustesEnLaNube(
     ajustesCuenta,
     (a) => {
       setGrupo(a.grupo)
-      establecerPermanentes(a.modulos)
+      establecer(a.modulos)
       fijarConfigSonido(a.sonido)
     },
     () => {
       // Al cerrar sesión, valores por defecto: en un ordenador compartido, el siguiente no ve tu configuración
       setGrupo(GRUPO_INICIAL)
-      establecerPermanentes([])
+      establecer([])
       fijarConfigSonido({ activo: true, volumen: 0.4 })
       borrarHechasLocales()
     },
@@ -76,12 +78,19 @@ function App() {
   const horario = datos?.horario ?? null
   const nombre = nombreGrupo(grupo)
 
-  // Clic en el horario: apagado temporal. Lo apagado en Ajustes no se toca desde aquí, solo se avisa
-  const alternarDesdeHorario = (id: string) => {
-    if (permanentes.has(id)) {
+  // La asignatura en foco: con un clic en el horario pasa a ser la ÚNICA que se ve en la Agenda y el Calendario.
+  // Un clic en otra la sustituye; otro clic en la misma, se vuelve a ver todo. Solo vive en memoria (estado de React)
+  const [foco, setFoco] = useState<string | null>(null)
+  // Valor derivado: si cambias de grupo o la apagas en Ajustes, el foco deja de valer solo (sin efectos ni limpiezas)
+  const focoValido = foco && modulosDeGrupo(grupo).includes(foco) && !excluidos.has(foco) ? foco : null
+  const elegirAsignatura = (id: string) => {
+    if (excluidos.has(id)) {
+      // Lo apagado en Ajustes no se elige desde aquí: solo se avisa
       sonar('disabled')
       avisar(`${nombreAsignatura(id)} está apagado en Ajustes: se vuelve a encender desde allí`)
-    } else alternarTemporal(id)
+      return
+    }
+    setFoco(focoValido === id ? null : id)
   }
   const reducido = useReducedMotion()
 
@@ -112,6 +121,11 @@ function App() {
     if (panelBloqueado) window.location.replace('#/entrar')
   }, [panelBloqueado])
 
+  // Cada página con su tema (lib/tema.ts): la landing clara, Ajustes en gris, el resto oscuro. useLayoutEffect
+  // (y no useEffect): se aplica ANTES de que el navegador pinte, así nunca se ve un fotograma con los colores de otra página
+  const tema = pagina === 'entrar' || panelBloqueado ? 'claro' : pagina === 'ajustes' ? 'gris' : 'oscuro'
+  useLayoutEffect(() => aplicarTema(tema), [tema])
+
   const [cortina, setCortina] = useState<(FaseCortina & { destino: Ruta; mensaje?: string }) | null>(null)
 
   // Un único sitio donde se aplican los módulos apagados: lo que no cursas no llega a ningún panel
@@ -119,6 +133,8 @@ function App() {
   const entregasCuenta = useEntregasCuenta()
   const eventos = useMemo(() => [...(datos?.eventos ?? []), ...entregasCuenta], [datos, entregasCuenta])
   const lista = useMemo(() => eventosVisibles(eventos, ahora, excluidos), [eventos, ahora, excluidos])
+  // Con una asignatura en foco, a la Agenda y al Calendario solo les llega lo suyo (la cabecera sigue siendo general)
+  const soloFoco = (l: EventoConDias[]) => (focoValido ? l.filter((e) => e.asignatura === focoValido) : l)
 
   // La fecha bajo la lupa del horario, que es también el día que enseña la Agenda. Se guarda como
   // texto ISO ("2026-11-13"). null = "hoy" (en fin de semana, sin lupa hasta que se elija un día)
@@ -129,7 +145,7 @@ function App() {
   const lunes = lunesDe(lupa ?? fechaDeLaSemana(ahora, 1))
   // Hoy: la hora real (la agenda sabe qué clases ya pasaron). Otro día: ese día a las 00:00
   const fechaAgenda = enHoy || !lupa ? ahora : lupa
-  const listaAgenda = enHoy ? lista : eventosVisibles(eventos, fechaAgenda, excluidos)
+  const listaAgenda = soloFoco(enHoy ? lista : eventosVisibles(eventos, fechaAgenda, excluidos))
   const elegirFecha = (f: Date | null) => {
     const destino = isoLocal(f ?? ahora)
     const actual = isoLocal(lupa ?? ahora)
@@ -141,7 +157,9 @@ function App() {
 
   // Cambio de página con la cortina de píxeles (sin animación si se pide movimiento reducido)
   // `mensaje` (opcional) se muestra al LLEGAR a la página nueva, no al salir: si no, la cortina lo taparía
-  const navegar = (destino: Ruta, origen: Origen, mensaje?: string) => {
+  const navegar: Navegar = (destino, origen, mensaje) => {
+    // A la landing desde dentro de la web: directo a la tarjeta de cuenta, sin repetir la historia
+    if (destino === 'entrar' || destino === 'crear') pedirFormulario()
     if (reducido) {
       sonar('transition_up')
       irA(destino)
@@ -171,8 +189,8 @@ function App() {
             modulos={modulosDeGrupo(grupo)}
             grupo={grupo}
             onGrupo={setGrupo}
-            excluidas={permanentes}
-            onAlternar={alternarPermanente}
+            excluidas={excluidos}
+            onAlternar={alternar}
             onRestablecer={restablecer}
             onNavegar={navegar}
             avisar={avisar}
@@ -203,6 +221,7 @@ function App() {
                   horario={horario}
                   grupo={nombre}
                   lista={listaAgenda}
+                  foco={focoValido}
                   excluidas={excluidos}
                   onHoy={() => elegirFecha(null)}
                   className="md:col-span-2"
@@ -213,8 +232,8 @@ function App() {
                 horario={horario}
                 grupo={nombre}
                 excluidas={excluidos}
-                permanentes={permanentes}
-                onAlternar={alternarDesdeHorario}
+                foco={focoValido}
+                onElegirAsignatura={elegirAsignatura}
                 lunes={lunes}
                 lupa={lupa}
                 onElegir={elegirFecha}
@@ -222,8 +241,9 @@ function App() {
               />
               <Calendario
                 ahora={ahora}
-                lista={lista}
-                sinDatos={datos || entregasCuenta.length ? undefined : nombre}
+                lista={soloFoco(lista)}
+                asignaturaEnFoco={focoValido}
+                sinDatos={datos ? undefined : nombre}
                 className="md:col-span-2 lg:col-span-8 lg:col-start-1 lg:row-start-2"
               />
             </motion.main>
