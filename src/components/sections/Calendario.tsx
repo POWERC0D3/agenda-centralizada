@@ -10,6 +10,8 @@ import { sonar } from '../../lib/sonido'
 import { CuentaAtras } from '../ui/CuentaAtras'
 import { EnlaceExterno } from '../ui/EnlaceExterno'
 import { Panel } from '../ui/Panel'
+import { Fuente } from './Agenda'
+import { esAtrasada } from '../../lib/tareas'
 import { SinDatos } from '../ui/SinDatos'
 
 type Modo = 'examenes' | 'escolar'
@@ -135,10 +137,11 @@ function FilaPrueba({
         <span className="block truncate text-xs text-tinta-suave">
           <span className="text-(--c)">{TIPO[e.tipo]}</span>
           {e.detalle && ` · ${e.detalle}`}
+          {e.fuente && <Fuente nombre={e.fuente} />}
           {foco && <span className="text-arena"> · la próxima</span>}
         </span>
       </span>
-      <CuentaAtras dias={e.dias} />
+      <CuentaAtras dias={e.dias} atrasada={esAtrasada(e)} />
       <EnlaceExterno href={urlDe(e)} etiqueta={`Abrir ${e.asignatura ? nombreAsignatura(e.asignatura) : 'la evaluación'}`} alPasar />
     </li>
   )
@@ -246,6 +249,8 @@ export function Calendario({ ahora, lista, sinDatos, className = '' }: Props) {
   // Sin registro del pasado: solo lo que queda por llegar
   const pruebas = lista.filter((e) => e.dias >= 0 && (filtro === 'todos' || e.tipo === filtro))
   const semanas = agruparPorSemana(pruebas)
+  // Entregas de las webs que vencieron sin entregar: van aparte, arriba (salvo con el filtro "solo exámenes")
+  const atrasadas = filtro === 'examen' ? [] : lista.filter(esAtrasada)
   const foco = proximoEvento(lista)
   const escolares = entradasEscolares(ahora)
 
@@ -437,7 +442,27 @@ export function Calendario({ ahora, lista, sinDatos, className = '' }: Props) {
                 <SinDatos que="calendario de exámenes" grupo={sinDatos} />
               ) : modo === 'examenes' ? (
                 <>
-                  {semanas.length === 0 && <p className="py-6 text-sm text-tinta-suave">No queda nada con este filtro.</p>}
+                  {atrasadas.length > 0 && (
+                    <section className="mb-3">
+                      <h3 className="sticky top-0 z-10 bg-fondo py-1 text-[0.7rem] font-medium text-coral">Atrasadas, sin entregar</h3>
+                      <ul>
+                        {atrasadas.map((e) => (
+                          <FilaPrueba
+                            key={e.id}
+                            e={e}
+                            foco={false}
+                            resaltada={diaResaltado === e.fecha}
+                            marcada={marcada === e.id}
+                            registrar={registrar(e.id)}
+                            onHover={setDiaResaltado}
+                          />
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                  {semanas.length === 0 && atrasadas.length === 0 && (
+                    <p className="py-6 text-sm text-tinta-suave">No queda nada con este filtro.</p>
+                  )}
                   {semanas.map((s) => (
                     <section key={s.lunes.getTime()} className="mb-3 last:mb-0">
                       <h3 className="sticky top-0 z-10 bg-fondo py-1 text-[0.7rem] text-tinta-suave">

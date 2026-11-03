@@ -369,15 +369,8 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
             descripcion="Trae tus entregas de las plataformas del instituto a la agenda, sin copiarlas a mano."
           >
             <div className="space-y-2">
-              <ConexionMoodle haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
-              <BotonCuenta
-                nombre="Mis Aulas"
-                detalle="aulas2.site: tiene la API apagada, se conectará por otra vía"
-                onClick={() => {
-                  avisar('La conexión con Mis Aulas llegará pronto')
-                  avanzar('sincronizar')
-                }}
-              />
+              <ConexionMoodle sitio="centro" haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
+              <ConexionMoodle sitio="misaulas" haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
               <BotonCuenta
                 nombre="Teams"
                 detalle="Educastur no deja conectar apps: podrás añadir sus tareas a mano"

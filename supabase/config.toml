@@ -431,3 +431,6 @@ verify_jwt = false
 
 [functions.borrar-cuenta]
 verify_jwt = false
+
+[functions.abrir-tarea]
+verify_jwt = false

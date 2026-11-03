@@ -17,7 +17,9 @@ function laClave(): Promise<CryptoKey> {
 export async function cifrar(texto: string): Promise<string> {
   // GCM exige un IV (vector de inicialización) distinto en cada cifrado: 12 bytes aleatorios
   const iv = crypto.getRandomValues(new Uint8Array(12))
-  const cifrado = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await laClave(), new TextEncoder().encode(texto)))
+  const cifrado = new Uint8Array(
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await laClave(), new TextEncoder().encode(texto)),
+  )
   return `v1:${aBase64(iv)}:${aBase64(cifrado)}`
 }
 

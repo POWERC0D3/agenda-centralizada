@@ -1,5 +1,4 @@
 [
-  { "fecha": "2026-11-04", "asignatura": "IP",    "tipo": "entrega", "detalle": "Entregar el Speaking en Teams" },
   { "fecha": "2026-11-11", "asignatura": "IP",    "tipo": "examen",  "detalle": "Leer & Escribir" },
   { "fecha": "2026-11-13", "asignatura": "SASP",  "tipo": "examen" },
   { "fecha": "2026-11-13", "asignatura": "PROG",  "tipo": "examen" },

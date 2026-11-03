@@ -25,6 +25,7 @@ export function useEntregasCuenta(): Evento[] {
           tipo: e.tipo,
           detalle: e.titulo,
           url: e.url ?? undefined,
+          fuente: e.fuente,
         })),
       )
     }

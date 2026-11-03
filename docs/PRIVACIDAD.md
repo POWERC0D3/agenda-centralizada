@@ -4,7 +4,7 @@
 
 **Monte Naranco Agenda Digital** es un proyecto personal de un alumno del IES Monte Naranco. **No es una herramienta oficial del centro** ni de Educastur.
 
-Última actualización: 2 de noviembre de 2026
+Última actualización: 3 de noviembre de 2026
 
 ---
 
@@ -22,7 +22,8 @@
 | Tu grupo, los módulos que no cursas y el sonido | Que la web te muestre tu horario y tus asignaturas, igual en todos tus dispositivos | Supabase y tu navegador |
 | Las tareas de la agenda que marcas como hechas | Recordarlas en todos tus dispositivos | Supabase y tu navegador |
 | **Si conectas Moodle:** tu usuario de Moodle y una clave de acceso de su app móvil (*token*) | Leer tus entregas pendientes y mostrarlas en la agenda. **Tu contraseña de Moodle no se guarda nunca:** se usa una sola vez para pedir esa clave. La clave se guarda **cifrada** y solo la usa el servidor. | Supabase |
-| **Si conectas Moodle:** el nombre de tus cursos y tus entregas pendientes (título, fecha, enlace) | Mostrarlas en la agenda y el calendario | Supabase |
+| **Si conectas Mis Aulas (aulas2.site):** tu usuario y tu contraseña | Esa web no permite el acceso a aplicaciones, así que para leer tus entregas el servidor inicia sesión por ti en cada sincronización. **Tu contraseña se guarda cifrada**, solo la usa el servidor para eso y se borra al desconectar. | Supabase |
+| **Si conectas Moodle o Mis Aulas:** el nombre de tus cursos y tus entregas pendientes (título, fecha, enlace) | Mostrarlas en la agenda y el calendario | Supabase |
 
 **No guardamos:** tus notas, tus mensajes, los archivos que entregas ni ningún dato de Teams.
 
@@ -42,7 +43,7 @@ Ningún dato se vende ni se cede a nadie. Solo los tratan los servicios técnico
 | **Amazon Web Services** (S3 y CloudFront) | Sirve la web. No guarda tus datos personales | UE y red de distribución mundial |
 | **Cloudflare** | Dirige el dominio hacia la web (DNS). No guarda tus datos | — |
 
-Cuando conectas Moodle, el servidor habla con **aula.iesmontenaranco.com** en tu nombre, con tu clave de acceso, para leer tus entregas.
+Cuando conectas Moodle o Mis Aulas, el servidor habla con **aula.iesmontenaranco.com** o **aulas2.site** en tu nombre para leer tus entregas.
 
 ## 5. Cuánto tiempo los guardamos
 
@@ -63,7 +64,7 @@ Si crees que no se han respetado tus derechos, puedes reclamar ante la **Agencia
 
 - Toda la comunicación va cifrada (HTTPS).
 - Cada usuario **solo puede ver sus propios datos**: lo impone la propia base de datos (*Row Level Security*).
-- Las claves de acceso a Moodle se guardan **cifradas** (AES-256-GCM), con una llave que solo tiene el servidor.
+- Las claves de acceso a Moodle y la contraseña de Mis Aulas se guardan **cifradas** (AES-256-GCM), con una llave que solo tiene el servidor.
 
 ## 8. Menores
 

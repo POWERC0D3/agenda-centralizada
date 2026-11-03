@@ -4,7 +4,7 @@ import { LogoMarca } from '../ui/LogoMarca'
 // Política de privacidad (RGPD, art. 13). Mismo contenido que docs/PRIVACIDAD.md: si cambia una, cambiar la otra.
 const RESPONSABLE = 'power'
 const CORREO = 'privacidad@alvaro.cloud'
-const ACTUALIZADA = '2 de noviembre de 2026'
+const ACTUALIZADA = '3 de noviembre de 2026'
 
 const Seccion = ({ titulo, children }: { titulo: string; children: ReactNode }) => (
   <section className="border-t border-linea pt-6">
@@ -84,7 +84,15 @@ export function Privacidad() {
                 esa clave, que se guarda cifrada y solo usa el servidor.
               </>,
             ],
-            ['Si conectas Moodle: tus cursos y tus entregas pendientes (título, fecha, enlace)', 'Mostrarlas en la agenda y el calendario.'],
+            [
+              'Si conectas Mis Aulas (aulas2.site): tu usuario y tu contraseña',
+              <>
+                Esa web no permite el acceso a aplicaciones, así que para leer tus entregas el servidor inicia sesión por ti en cada
+                sincronización. <strong>Tu contraseña se guarda cifrada</strong>, solo la usa el servidor para eso y se borra al
+                desconectar.
+              </>,
+            ],
+            ['Si conectas Moodle o Mis Aulas: tus cursos y tus entregas pendientes (título, fecha, enlace)', 'Mostrarlas en la agenda y el calendario.'],
           ]}
         />
         <p>
@@ -113,7 +121,7 @@ export function Privacidad() {
             ['Cloudflare', 'Dirige el dominio a la web (DNS); no guarda tus datos', '—'],
           ]}
         />
-        <p>Si conectas Moodle, el servidor habla con aula.iesmontenaranco.com en tu nombre para leer tus entregas.</p>
+        <p>Si conectas Moodle o Mis Aulas, el servidor habla con aula.iesmontenaranco.com o aulas2.site en tu nombre para leer tus entregas.</p>
       </Seccion>
 
       <Seccion titulo="5. Cuánto tiempo">
@@ -149,7 +157,8 @@ export function Privacidad() {
       <Seccion titulo="7. Seguridad">
         <p>
           Toda la comunicación va cifrada (HTTPS). Cada usuario solo puede ver sus propios datos: lo impone la propia base de datos.
-          Las claves de acceso a Moodle se guardan cifradas (AES-256-GCM) con una llave que solo tiene el servidor.
+          Las claves de acceso a Moodle y la contraseña de Mis Aulas se guardan cifradas (AES-256-GCM) con una llave que solo tiene el
+          servidor.
         </p>
       </Seccion>
 

@@ -1,7 +1,7 @@
 import type { EventoConDias, Horario } from '../types'
 import { nombreAsignatura } from './datos'
 import { clasesDeLaFecha } from './escolar'
-import { formatoDiaSemana, horaAMinutos, minutosDelDia, sumarDias } from './fechas'
+import { formatoDiaSemana, horaAMinutos, MESES_CORTOS, minutosDelDia, sumarDias } from './fechas'
 import type { Excluidas } from './horario'
 
 /** Cuánto importa hacerlo HOY. */
@@ -15,16 +15,27 @@ export type Tarea = {
   prioridad: Prioridad
   asignatura?: string | null
   dias: number // días hasta la prueba que la origina (para ordenar por urgencia)
+  fuente?: string // de qué web viene (si viene de fuera)
+  url?: string // la tarea en su web
+  entregaId?: string // id en la tabla entregas (para abrirla con inicio de sesión automático)
 }
 
 const ORDEN: Record<Prioridad, number> = { prioritario: 0, importante: 1, opcional: 2 }
 
 // "hoy" · "mañana" · "el vie 13": cuándo es la prueba, lo más corto posible
 const cuando = (e: EventoConDias) =>
-  e.dias === 0 ? 'hoy' : e.dias === 1 ? 'mañana' : `el ${formatoDiaSemana(e.dia)} ${e.dia.getDate()}`
+  e.dias === 0
+    ? 'hoy'
+    : e.dias === 1
+      ? 'mañana'
+      : // Hace más de una semana: con el mes, que "el lun 5" ya no basta para saber cuál
+        `el ${formatoDiaSemana(e.dia)} ${e.dia.getDate()}${e.dias < -6 ? ` ${MESES_CORTOS[e.dia.getMonth()]}` : ''}`
 // El motivo es un dato, no una frase: "Examen mañana · Leer & Escribir"
+/** Una entrega de las webs que ya venció y sigue en su Línea de tiempo: no se entregó. Lo más urgente de todo */
+export const esAtrasada = (e: EventoConDias) => e.dias < 0 && e.tipo === 'entrega' && !!e.fuente
+
 const motivo = (e: EventoConDias) => {
-  const base = `${e.tipo === 'entrega' ? 'Entrega' : 'Examen'} ${cuando(e)}`
+  const base = esAtrasada(e) ? `Venció ${cuando(e)}` : `${e.tipo === 'entrega' ? 'Entrega' : 'Examen'} ${cuando(e)}`
   return e.detalle ? `${base} · ${e.detalle}` : base
 }
 
@@ -32,18 +43,28 @@ const motivo = (e: EventoConDias) => {
  * Las tareas del día, deducidas de tus pruebas y tu horario (no un resumen: una guía).
  * Cada regla es un `if` sencillo; el resultado va ordenado por prioridad y urgencia.
  */
-export function tareasDelDia(horario: Horario, ahora: Date, lista: EventoConDias[], excluir: Excluidas): Tarea[] {
+export function tareasDelDia(
+  horario: Horario,
+  ahora: Date,
+  lista: EventoConDias[],
+  excluir: Excluidas,
+  /** Solo tareas de lo que viene de fuera (las webs del instituto): sin repasos, dudas ni hábitos del horario */
+  soloDeFuera = false,
+): Tarea[] {
   const tareas: Tarea[] = []
   // Sin límite de fechas: cuantas más tareas haya, más se puede llenar la libreta (la Agenda muestra las que caben)
-  const proximas = lista.filter((e) => e.dias >= 0 && e.tipo !== 'evaluacion')
+  // Lo que queda por llegar, y lo atrasado de las webs (lo pasado del JSON ya no tiene remedio: fuera)
+  const proximas = lista.filter((e) => (e.dias >= 0 || esAtrasada(e)) && e.tipo !== 'evaluacion' && (!soloDeFuera || e.fuente))
 
   for (const e of proximas) {
     const nombre = nombreAsignatura(e.asignatura)
-    const base = { id: `${e.tipo}-${e.id}`, asignatura: e.asignatura, dias: e.dias, motivo: motivo(e) }
+    const base = { id: `${e.tipo}-${e.id}`, asignatura: e.asignatura, dias: e.dias, motivo: motivo(e), fuente: e.fuente, url: e.url, entregaId: e.id.startsWith('cuenta-') ? e.id.slice(7) : undefined }
 
     if (e.tipo === 'entrega') {
       tareas.push(
-        e.dias <= 2
+        e.dias < 0
+          ? { ...base, prioridad: 'prioritario', texto: `Atrasada: ${nombre}` } // dias negativo: queda la primera al ordenar
+          : e.dias <= 2
           ? { ...base, prioridad: 'prioritario', texto: `Termina ${nombre}` }
           : e.dias <= 7
             ? { ...base, prioridad: 'importante', texto: `Avanza ${nombre}` }
@@ -58,6 +79,9 @@ export function tareasDelDia(horario: Horario, ahora: Date, lista: EventoConDias
     else if (e.dias <= 7) tareas.push({ ...base, prioridad: 'opcional', texto: `Esquema de ${nombre}` })
     else tareas.push({ ...base, prioridad: 'opcional', texto: `Empieza ${nombre}` })
   }
+
+  // Lo demás se deduce del horario y de los exámenes, no viene de fuera
+  if (soloDeFuera) return tareas.sort((a, b) => ORDEN[a.prioridad] - ORDEN[b.prioridad] || a.dias - b.dias)
 
   // Dos o más pruebas el mismo día: repartir el repaso
   const porDia = new Map<string, EventoConDias[]>()

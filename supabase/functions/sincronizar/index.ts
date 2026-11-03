@@ -2,7 +2,7 @@
 // Vuelve a leer la Línea de tiempo de todos los Moodle del alumno y actualiza sus entregas.
 // (Más adelante, pg_cron llamará a una variante que recorra a todos los alumnos.)
 import { admin, cabeceras, quienLlama, responder } from '../_shared/http.ts'
-import { sincronizarConexion } from '../_shared/sincronizar.ts'
+import { COLUMNAS_CONEXION, sincronizarConexion } from '../_shared/sincronizar.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cabeceras(req) })
@@ -12,10 +12,7 @@ Deno.serve(async (req) => {
   if (!userId) return responder(req, { error: 'Inicia sesión para sincronizar' }, 401)
 
   const db = admin()
-  const { data: conexiones, error } = await db
-    .from('conexiones_moodle')
-    .select('id, user_id, sitio, moodle_user_id, token_cifrado')
-    .eq('user_id', userId)
+  const { data: conexiones, error } = await db.from('conexiones_moodle').select(COLUMNAS_CONEXION).eq('user_id', userId)
   if (error) return responder(req, { error: 'No se pudieron leer tus conexiones' }, 500)
 
   // Cada conexión por separado: si una falla (token revocado…), las demás siguen

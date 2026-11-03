@@ -246,7 +246,7 @@ Decisiones tomadas (2 nov 2026): arquitectura del §5 confirmada; modo **delegar
 5. [x] Tabla `conexiones_moodle` (token cifrado con AES-GCM en las Edge Functions) + Edge Function `conectar-moodle`, método A.
 6. [~] Edge Function `sincronizar` (hecha, con botón "Sincronizar ahora"). Falta el `pg_cron` cada 30 minutos.
 7. [~] Ajustes → Sincronizar: conectar, sincronizar y desconectar Moodle. La asignatura de cada curso se adivina por su nombre (`cursos_moodle`); falta poder corregirla desde la web.
-8. [ ] Método B (aulas2.site) con la contraseña cifrada.
+8. [x] Método B (aulas2.site): inicio de sesión web en cada sincronización, con la contraseña cifrada (AES-GCM, la misma llave que los tokens). Comprobado sin credenciales que un login fallido también trae `sesskey`: el éxito se detecta por el enlace de `login/logout.php`.
 9. [ ] Más adelante: volver a mirar Teams con Power Automate (§4.4) o con el calendario (§4.3).
 
 ---

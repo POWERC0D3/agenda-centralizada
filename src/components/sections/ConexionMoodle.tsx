@@ -2,7 +2,34 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { conectarMoodle, desconectarMoodle, misConexiones, sincronizarAhora, type ConexionMoodle as Conexion } from '../../lib/moodle'
 import { sonar } from '../../lib/sonido'
 
+// Cada sitio: su nombre, su dominio y qué pasa con la contraseña (hay que decirlo con claridad)
+const SITIOS = {
+  centro: {
+    titulo: 'Moodle del instituto',
+    dominio: 'aula.iesmontenaranco.com',
+    nota: (
+      <>
+        Tu contraseña <strong className="font-medium text-tinta">no se guarda</strong>: solo se usa para pedir a Moodle una clave de
+        acceso (la de su app móvil), que se guarda cifrada y que esta web usa únicamente para leer tus entregas pendientes. Puedes
+        revocarla cuando quieras desconectando aquí o en Moodle (Preferencias → Claves de seguridad).
+      </>
+    ),
+  },
+  misaulas: {
+    titulo: 'Mis Aulas',
+    dominio: 'aulas2.site',
+    nota: (
+      <>
+        Esta web tiene apagado el acceso para aplicaciones, así que para leer tus entregas hay que iniciar sesión por ti en cada
+        sincronización: <strong className="font-medium text-tinta">tu contraseña se guarda cifrada</strong> y solo la usa el
+        servidor para eso. Al desconectar se borra. Si cambias tu contraseña de Mis Aulas, vuelve a conectar.
+      </>
+    ),
+  },
+} as const
+
 type Props = {
+  sitio: keyof typeof SITIOS
   haySesion: boolean
   avisar: (texto: string) => void
   /** Se ha usado (conectar, sincronizar…): en la configuración guiada, enseña la siguiente sección */
@@ -25,7 +52,8 @@ const boton = 'border border-linea px-3.5 py-1.5 text-sm transition-colors disab
  * La conexión con el Moodle del centro (aula.iesmontenaranco.com).
  * La contraseña solo viaja a la Edge Function, que pide a Moodle un acceso (token) y la olvida.
  */
-export function ConexionMoodle({ haySesion, avisar, onUsar }: Props) {
+export function ConexionMoodle({ sitio, haySesion, avisar, onUsar }: Props) {
+  const info = SITIOS[sitio]
   const [conexion, setConexion] = useState<Conexion | null | undefined>(undefined) // undefined = cargando
   const [formulario, setFormulario] = useState(false)
   const [ocupado, setOcupado] = useState<null | 'conectar' | 'sincronizar' | 'desconectar'>(null)
@@ -33,12 +61,19 @@ export function ConexionMoodle({ haySesion, avisar, onUsar }: Props) {
 
   const leer = () =>
     misConexiones()
-      .then((cs) => setConexion(cs.find((c) => c.sitio === 'centro') ?? null))
+      .then((cs) => setConexion(cs.find((c) => c.sitio === sitio) ?? null))
       .catch(() => setConexion(null))
 
   useEffect(() => {
-    if (haySesion) void leer()
-  }, [haySesion])
+    if (!haySesion) return
+    let vivo = true // si se desmonta antes de que llegue la respuesta, no se toca el estado
+    misConexiones()
+      .then((cs) => vivo && setConexion(cs.find((c) => c.sitio === sitio) ?? null))
+      .catch(() => vivo && setConexion(null))
+    return () => {
+      vivo = false
+    }
+  }, [haySesion, sitio])
 
   const conectar = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -47,7 +82,7 @@ export function ConexionMoodle({ haySesion, avisar, onUsar }: Props) {
     setError(null)
     onUsar()
     try {
-      const r = await conectarMoodle(String(datos.get('usuario')).trim(), String(datos.get('clave')))
+      const r = await conectarMoodle(sitio, String(datos.get('usuario')).trim(), String(datos.get('clave')))
       sonar('toggle_on')
       avisar(r.pendientes ? `Conectado: ${r.pendientes} entregas pendientes` : 'Conectado: no tienes entregas pendientes')
       setFormulario(false)
@@ -80,7 +115,7 @@ export function ConexionMoodle({ haySesion, avisar, onUsar }: Props) {
     try {
       await desconectarMoodle(conexion.id)
       sonar('toggle_off')
-      avisar('Moodle desconectado: se han borrado su acceso y sus entregas')
+      avisar(`${info.titulo} desconectado: se han borrado su acceso y sus entregas`)
       setConexion(null)
     } catch {
       avisar('No se pudo desconectar')
@@ -93,8 +128,8 @@ export function ConexionMoodle({ haySesion, avisar, onUsar }: Props) {
     <div className="border border-linea bg-fondo-alto/60 px-5 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <span>
-          <span className="block font-medium">Moodle del instituto</span>
-          <span className="block text-xs text-tinta-suave">aula.iesmontenaranco.com</span>
+          <span className="block font-medium">{info.titulo}</span>
+          <span className="block text-xs text-tinta-suave">{info.dominio}</span>
         </span>
 
         {!haySesion ? (
@@ -139,17 +174,15 @@ export function ConexionMoodle({ haySesion, avisar, onUsar }: Props) {
       {haySesion && conexion === null && formulario && (
         <form onSubmit={conectar} className="mt-4 space-y-3" aria-busy={ocupado === 'conectar'}>
           <label className="block">
-            <span className="mb-1.5 block text-xs text-tinta-suave">Usuario de Moodle</span>
+            <span className="mb-1.5 block text-xs text-tinta-suave">Usuario de {info.titulo}</span>
             <input name="usuario" required autoComplete="username" className={campo} />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-xs text-tinta-suave">Contraseña de Moodle</span>
+            <span className="mb-1.5 block text-xs text-tinta-suave">Contraseña de {info.titulo}</span>
             <input name="clave" type="password" required autoComplete="current-password" className={campo} />
           </label>
           <p className="text-xs leading-relaxed text-tinta-suave">
-            Tu contraseña <strong className="font-medium text-tinta">no se guarda</strong>: solo se usa para pedir a Moodle una
-            clave de acceso (la de su app móvil), que se guarda cifrada y que esta web usa únicamente para leer tus entregas
-            pendientes. Puedes revocarla cuando quieras desconectando aquí o en Moodle (Preferencias → Claves de seguridad).{' '}
+            {info.nota}{' '}
             <a href="#/privacidad" className="text-tinta underline underline-offset-4 hover:text-arena">
               Más sobre tu privacidad
             </a>

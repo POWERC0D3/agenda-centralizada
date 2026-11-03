@@ -33,6 +33,8 @@ export type Evento = {
   url?: string
   /** Id estable (las entregas de la cuenta traen el suyo de la base de datos). Sin él, se calcula */
   id?: string
+  /** De qué web viene ("Aula virtual"…). Sin fuente = de los datos del propio proyecto (el JSON) */
+  fuente?: string
 }
 
 /** Un evento ya "calculado" respecto a hoy */

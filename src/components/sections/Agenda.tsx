@@ -76,6 +76,15 @@ const FOCO = [
   'shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_0_0_1px_color-mix(in_oklab,var(--color-arena)_55%,transparent),0_10px_20px_-6px_rgb(0_0_0/0.75),0_34px_70px_-18px_rgb(0_0_0/0.95),0_0_60px_-14px_color-mix(in_oklab,var(--color-arena)_35%,transparent)]!',
 ].join(' ')
 
+/** Etiqueta pequeña con la web de la que viene una tarea o entrega ("Aula virtual"…). */
+export function Fuente({ nombre }: { nombre: string }) {
+  return (
+    <span className="ml-1.5 inline-block border border-linea px-1 align-[1px] font-mono text-[0.6rem] leading-[1.4] tracking-wide text-tinta-suave uppercase">
+      {nombre}
+    </span>
+  )
+}
+
 /** Esqueleto mientras "la IA prepara el plan": barras grises con un barrido de luz que las recorre. */
 function Cargando() {
   const barra = (ancho: string) => (
@@ -122,6 +131,28 @@ function Casilla({ marcada }: { marcada: boolean }) {
   )
 }
 
+/**
+ * Abre una tarea en su web. Si es una entrega de la cuenta, pide al servidor el enlace con inicio de sesión
+ * automático (Moodle del centro); si no se puede, el enlace normal.
+ * La pestaña se abre YA, dentro del clic: los navegadores bloquean las ventanas que se abren después de esperar
+ * una respuesta. Se abre en blanco y, cuando llega el enlace, se le cambia la dirección.
+ */
+function abrirTarea(url: string, entregaId?: string) {
+  if (!entregaId) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+    return
+  }
+  const ventana = window.open('about:blank', '_blank')
+  if (ventana) ventana.opener = null // la pestaña nueva no puede tocar esta página (como noopener)
+  import('../../lib/moodle')
+    .then((m) => m.enlaceDeTarea(entregaId))
+    .catch(() => url) // sin red o error: el enlace normal
+    .then((destino) => {
+      if (ventana) ventana.location.href = destino
+      else window.open(destino, '_blank', 'noopener,noreferrer')
+    })
+}
+
 function FilaTarea({
   t,
   hecha,
@@ -136,6 +167,28 @@ function FilaTarea({
   estatica?: boolean // copia para medir: mismo tamaño, sin animaciones
 }) {
   const p = BRILLO[t.prioridad]
+  const contenido = (
+    <>
+      <span className={`flex items-center gap-1.5 text-sm leading-snug font-medium ${hecha ? 'line-through' : p}`}>
+        {/* La prioridad sin palabras: un punto coral si es para ya; texto tenue si es "si te da tiempo" */}
+        {t.prioridad === 'prioritario' && !hecha && <span className="size-1.5 shrink-0 rounded-full bg-coral" title="Prioritario" />}
+        <span className="min-w-0">{estatica ? t.texto : <Escritura texto={t.texto} retraso={retraso} ritmo={9} />}</span>
+        {t.url && (
+          <span
+            className="shrink-0 text-xs text-tinta-suave opacity-0 transition-opacity group-hover/abrir:opacity-100 group-focus-visible/abrir:opacity-100"
+            aria-hidden="true"
+          >
+            ↗
+          </span>
+        )}
+      </span>
+      {/* El motivo empieza casi a la vez que el título y va más deprisa: todo queda escrito en ~0,6 s */}
+      <span className="block text-xs leading-relaxed text-tinta-suave">
+        {estatica ? t.motivo : <Escritura texto={t.motivo} retraso={retraso + 120} ritmo={6} />}
+        {t.fuente && <Fuente nombre={t.fuente} />}
+      </span>
+    </>
+  )
   return (
     <motion.li
       layout={!estatica} // al marcarla baja al final: Motion anima el cambio de posición
@@ -144,30 +197,41 @@ function FilaTarea({
       style={{ '--c': t.asignatura ? colorAsignatura(t.asignatura) : 'var(--color-linea)' } as CSSProperties}
       className="border-b border-linea/60 last:border-0"
     >
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={hecha}
-        onClick={(e) => onAlternar(e.clientX)}
-        className="group relative grid w-full grid-cols-[1rem_minmax(0,1fr)] gap-x-3 py-2.5 pl-2 text-left"
-      >
+      {/* Dos zonas: la casilla marca la tarea como hecha; el texto abre la tarea en su web (si tiene enlace) */}
+      <div className="relative grid grid-cols-[1rem_minmax(0,1fr)] gap-x-3 py-2.5 pl-2">
         {/* Marca del color de la asignatura */}
         <span className="absolute top-2.5 bottom-2.5 left-0 w-0.5 bg-(--c)" aria-hidden="true" />
-        <Casilla marcada={hecha} />
-        <span className={`min-w-0 transition-opacity ${hecha ? 'opacity-40' : ''}`}>
-          <span className={`flex items-center gap-1.5 text-sm leading-snug font-medium ${hecha ? 'line-through' : p}`}>
-            {/* La prioridad sin palabras: un punto coral si es para ya; texto tenue si es "si te da tiempo" */}
-            {t.prioridad === 'prioritario' && !hecha && (
-              <span className="size-1.5 shrink-0 rounded-full bg-coral" title="Prioritario" />
-            )}
-            <span className="min-w-0">{estatica ? t.texto : <Escritura texto={t.texto} retraso={retraso} ritmo={9} />}</span>
-          </span>
-          {/* El motivo empieza casi a la vez que el título y va más deprisa: todo queda escrito en ~0,6 s */}
-          <span className="block text-xs leading-relaxed text-tinta-suave">
-            {estatica ? t.motivo : <Escritura texto={t.motivo} retraso={retraso + 120} ritmo={6} />}
-          </span>
-        </span>
-      </button>
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={hecha}
+          aria-label={`${t.texto}: ${hecha ? 'hecha' : 'pendiente'}`}
+          onClick={(e) => onAlternar(e.clientX)}
+          className="group -m-1 self-start p-1"
+        >
+          <Casilla marcada={hecha} />
+        </button>
+        {t.url ? (
+          <a
+            href={t.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Abrir en ${t.fuente ?? 'su web'}`}
+            onClick={(e) => {
+              if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return // abrir a mano en otra pestaña: enlace normal
+              e.preventDefault()
+              abrirTarea(t.url!, t.entregaId)
+            }}
+            className={`group/abrir min-w-0 text-left transition-opacity ${hecha ? 'opacity-40' : ''}`}
+          >
+            {contenido}
+          </a>
+        ) : (
+          <button type="button" onClick={(e) => onAlternar(e.clientX)} className={`min-w-0 text-left transition-opacity ${hecha ? 'opacity-40' : ''}`}>
+            {contenido}
+          </button>
+        )}
+      </div>
     </motion.li>
   )
 }
@@ -220,7 +284,9 @@ function PlanDelDia({ ahora, fecha, horario, lista, excluidas, cargando, dir }: 
     return () => ro.disconnect()
   }, [zona, medidor])
 
-  const todas = tareasDelDia(horario, fecha, lista, excluidas)
+  // Por ahora, solo lo que viene de las webs del instituto (Moodle…); para volver a las tareas deducidas
+  // de los exámenes y el horario, quitar el último `true`
+  const todas = tareasDelDia(horario, fecha, lista, excluidas, true)
   // El plan del día: las de más prioridad que caben (las hechas siguen dentro, al final)
   const tareas = todas.slice(0, cabe)
   const ordenadas = [...tareas.filter((t) => !hechas.has(t.id)), ...tareas.filter((t) => hechas.has(t.id))]

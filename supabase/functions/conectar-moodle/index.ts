@@ -1,13 +1,26 @@
 // POST /functions/v1/conectar-moodle   { sitio: 'centro', usuario, clave }   (con la sesión del alumno)
 //
-// 1. Pide a Moodle un token con el usuario y la contraseña (la contraseña se usa AQUÍ y se olvida).
-// 2. Comprueba el token y averigua el id del alumno en Moodle.
-// 3. Guarda la conexión con el token CIFRADO.
-// 4. Sincroniza por primera vez.
+// Método A (sitio con API, 'centro'): pide un token con el usuario y la contraseña, y guarda SOLO el token
+//   cifrado. La contraseña se usa aquí y se olvida.
+// Método B (sitio con la API apagada, 'misaulas'): no hay token posible. Se comprueba que el usuario y la
+//   contraseña inician sesión en la web, y se guarda la CONTRASEÑA CIFRADA (cada sincronización vuelve a entrar).
+// Después, en los dos casos, la primera sincronización.
 import { cifrar } from '../_shared/cifrado.ts'
 import { admin, cabeceras, quienLlama, responder } from '../_shared/http.ts'
-import { ErrorMoodle, infoSitio, pedirToken, SITIOS, type Sitio } from '../_shared/moodle.ts'
-import { sincronizarConexion } from '../_shared/sincronizar.ts'
+import {
+  abrirSesionWeb,
+  cerrarSesionWeb,
+  ErrorMoodle,
+  infoSitio,
+  nombreSitio,
+  pedirToken,
+  SITIOS,
+  type Sitio,
+} from '../_shared/moodle.ts'
+import { COLUMNAS_CONEXION, sincronizarConexion } from '../_shared/sincronizar.ts'
+
+// Qué método usa cada sitio (lo averiguó la investigación: docs/INTEGRACIONES.md §3.5)
+const METODO: Record<Sitio, 'token' | 'sesion'> = { centro: 'token', misaulas: 'sesion' }
 
 // Mensajes para el alumno según el código de error de Moodle
 const MENSAJES: Record<string, string> = {
@@ -37,31 +50,44 @@ Deno.serve(async (req) => {
 
   const base = SITIOS[sitio]
   try {
-    const token = await pedirToken(base, usuario, clave)
-    const info = await infoSitio(base, token)
+    let fila: Record<string, unknown>
+    if (METODO[sitio] === 'token') {
+      const { token, privatetoken } = await pedirToken(base, usuario, clave)
+      const info = await infoSitio(base, token)
+      fila = {
+        nombre: info.sitename,
+        usuario: info.username,
+        moodle_user_id: info.userid,
+        metodo: 'token',
+        token_cifrado: await cifrar(token),
+        privatetoken_cifrado: privatetoken ? await cifrar(privatetoken) : null,
+        password_cifrada: null,
+      }
+    } else {
+      // Probar que la contraseña vale (y cerrar enseguida esa sesión) antes de guardarla
+      const sesion = await abrirSesionWeb(base, usuario, clave)
+      await cerrarSesionWeb(sesion)
+      fila = {
+        nombre: (await nombreSitio(base)) ?? 'Mis Aulas',
+        usuario,
+        moodle_user_id: null,
+        metodo: 'sesion',
+        token_cifrado: null,
+        privatetoken_cifrado: null,
+        password_cifrada: await cifrar(clave),
+      }
+    }
 
     const db = admin()
     const { data: conexion, error } = await db
       .from('conexiones_moodle')
-      .upsert(
-        {
-          user_id: userId,
-          sitio,
-          nombre: info.sitename,
-          usuario: info.username,
-          moodle_user_id: info.userid,
-          metodo: 'token',
-          token_cifrado: await cifrar(token),
-          ultimo_error: null,
-        },
-        { onConflict: 'user_id,sitio' }, // volver a conectar sustituye la conexión anterior
-      )
-      .select('id, user_id, sitio, moodle_user_id, token_cifrado')
+      .upsert({ user_id: userId, sitio, ...fila, ultimo_error: null }, { onConflict: 'user_id,sitio' }) // reconectar sustituye la anterior
+      .select(COLUMNAS_CONEXION)
       .single()
     if (error) throw error
 
     const pendientes = await sincronizarConexion(db, conexion)
-    return responder(req, { ok: true, nombre: info.sitename, pendientes })
+    return responder(req, { ok: true, nombre: fila.nombre, pendientes })
   } catch (e) {
     if (e instanceof ErrorMoodle) return responder(req, { error: MENSAJES[e.codigo] ?? `Moodle: ${e.message}` }, 400)
     console.error('conectar-moodle', e instanceof Error ? e.message : e) // sin datos sensibles
