@@ -84,6 +84,8 @@ La dinámica real fue un bucle corto: **petición del alumno → plan → cambio
 - **Temporal:** clic en el horario. Vive en el estado de React y se pierde al recargar.
 - **Permanente:** desde Ajustes. Se guarda en `localStorage`.
 
+> Más tarde (noviembre de 2026) el clic cambió de sentido: en vez de apagar una asignatura, la pone **en foco** y pasa a ser la única que se ve en la Agenda y el Calendario. El apagado temporal desapareció; el permanente sigue en Ajustes.
+
 Un botón de "restablecer todo" se quitó porque daba problemas y confundía.
 
 **Selector de grupo.** Carruseles para elegir ciclo (DAW/DAM), curso (1º/2º) y grupo (A/B). Solo hay datos de DAW 1º A; para los demás se diseñó un estado vacío. Toda la lectura de datos pasó por **una sola función** (`datosDelGrupo`), como un repositorio en Java: el día que haya backend, solo cambia esa función.

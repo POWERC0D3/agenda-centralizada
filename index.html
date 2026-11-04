@@ -8,6 +8,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Monte Naranco Agenda Digital</title>
     <meta name="description" content="Tu horario, tus exámenes y entregas y el plan de cada día del IES Monte Naranco, en una sola pantalla." />
+    <script>
+      // El tema de la página ANTES de pintar nada, para que no parpadee en negro mientras carga la web.
+      // Va claro la landing (#/entrar, #/crear) y el panel sin sesión, que lleva a ella; gris, Ajustes. La misma
+      // regla que App (lib/tema.ts); la sesión, como en useHaySesion: supabase-js la guarda en "sb-<proyecto>-auth-token"
+      // Dentro de una función, para no dejar variables globales sueltas
+      ;(function () {
+        try {
+          var h = location.hash
+          var sesion = Object.keys(localStorage).some(function (k) { return /^sb-.+-auth-token$/.test(k) })
+          var otra = h === '#/ajustes' || h === '#/privacidad'
+          if (h === '#/ajustes') document.documentElement.dataset.tema = 'gris'
+          else if (h === '#/entrar' || h === '#/crear' || (!otra && !sesion)) document.documentElement.dataset.tema = 'claro'
+        } catch (e) {
+          // sin localStorage: tema oscuro hasta que arranque la web
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -29,6 +29,9 @@ export function CortinaPixel({ estado, onCubierta, onFin }: Props) {
   useEffect(() => {
     avisos.current = { onCubierta, onFin }
   })
+  // El color con el que se cubrió la pantalla. Al descubrir se usa el mismo aunque la página nueva tenga otro
+  // tema: de la landing (clara) al panel, el papel se deshace en píxeles y deja ver el panel oscuro
+  const colorCubierta = useRef('')
 
   useEffect(() => {
     const cv = ref.current
@@ -36,7 +39,8 @@ export function CortinaPixel({ estado, onCubierta, onFin }: Props) {
     if (!cv || !g || !estado) return
 
     const estilos = getComputedStyle(document.documentElement)
-    const fondo = estilos.getPropertyValue('--color-fondo').trim()
+    if (estado.fase === 'cubrir' || !colorCubierta.current) colorCubierta.current = estilos.getPropertyValue('--color-fondo').trim()
+    const fondo = colorCubierta.current
     const arena = estilos.getPropertyValue('--color-arena').trim()
     const dpr = Math.min(2, window.devicePixelRatio || 1)
     cv.width = innerWidth * dpr

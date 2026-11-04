@@ -19,7 +19,8 @@ const FUENTES: Record<string, string> = { centro: 'Aula virtual', misaulas: 'Mis
 
 export type EntregaCuenta = {
   id: string
-  fuente: string // "Aula virtual", "Mis Aulas", "A mano"…
+  origen: 'moodle' | 'manual'
+  fuente: string // "Aula virtual", "Mis Aulas", "Teams"…
   tipo: 'entrega' | 'examen'
   titulo: string
   fecha: string // ISO con hora
@@ -28,7 +29,7 @@ export type EntregaCuenta = {
 }
 
 /** Avisa al panel de que han cambiado las entregas (conectar, sincronizar, desconectar…). */
-export const avisarCambioEntregas = () => window.dispatchEvent(new Event('agenda:entregas'))
+const avisarCambioEntregas = () => window.dispatchEvent(new Event('agenda:entregas'))
 
 /** El mensaje de error que devuelve una Edge Function ({ error: "…" }), o uno genérico. */
 async function mensajeDe(error: unknown): Promise<string> {
@@ -85,12 +86,13 @@ export async function misEntregas(): Promise<EntregaCuenta[]> {
   if (!sesion.session) return []
   const { data, error } = await supabase
     .from('entregas')
-    .select('id, tipo, titulo, fecha, url, asignatura_id, origen, conexiones_moodle(sitio)')
+    .select('id, tipo, titulo, fecha, url, asignatura_id, origen, plataforma, conexiones_moodle(sitio)')
     .order('fecha')
   if (error) throw error
-  return data.map(({ origen, conexiones_moodle: c, ...e }) => {
+  return data.map(({ conexiones_moodle: c, plataforma, ...e }) => {
     const sitio = (Array.isArray(c) ? c[0] : c)?.sitio as string | undefined
-    return { ...e, fuente: origen === 'manual' ? 'A mano' : ((sitio && FUENTES[sitio]) ?? 'Moodle') } as EntregaCuenta
+    const fuente = e.origen === 'manual' ? (plataforma ?? 'A mano') : ((sitio && FUENTES[sitio]) ?? 'Moodle')
+    return { ...e, fuente } as EntregaCuenta
   })
 }
 
@@ -137,4 +139,58 @@ export async function enlaceDeTarea(entregaId: string): Promise<string> {
     aviso(`no se pudo hablar con Moodle (${e instanceof Error ? e.message : 'error'})`)
     return url
   }
+}
+
+// ── Cursos de una conexión: de qué asignatura es cada uno (se puede corregir en Ajustes) ──
+
+export type CursoMoodle = { curso_id: number; nombre: string; asignatura_id: string | null }
+
+export async function misCursos(conexionId: string): Promise<CursoMoodle[]> {
+  const { data, error } = await supabase
+    .from('cursos_moodle')
+    .select('curso_id, nombre, asignatura_id')
+    .eq('conexion_id', conexionId)
+    .order('nombre')
+  if (error) throw error
+  return data as CursoMoodle[]
+}
+
+/** Cambia la asignatura de un curso y, al momento, la de sus entregas (la sincronización respetará la elección). */
+export async function cambiarAsignaturaCurso(conexionId: string, curso: CursoMoodle, asignaturaId: string | null) {
+  const { error } = await supabase
+    .from('cursos_moodle')
+    .update({ asignatura_id: asignaturaId })
+    .eq('conexion_id', conexionId)
+    .eq('curso_id', curso.curso_id)
+  if (error) throw error
+  // Las entregas guardan el nombre del curso (no su id): se actualizan las de ese nombre en esa conexión
+  await supabase.from('entregas').update({ asignatura_id: asignaturaId }).eq('conexion_id', conexionId).eq('curso', curso.nombre)
+  avisarCambioEntregas()
+}
+
+// ── Tareas añadidas a mano (Teams, que no se puede conectar) ──
+
+export type TareaManual = { id: string; titulo: string; fecha: string; asignatura_id: string | null; url: string | null; tipo: 'entrega' | 'examen' }
+
+export async function misTareasManuales(): Promise<TareaManual[]> {
+  const { data, error } = await supabase
+    .from('entregas')
+    .select('id, titulo, fecha, asignatura_id, url, tipo')
+    .eq('origen', 'manual')
+    .order('fecha')
+  if (error) throw error
+  return data as TareaManual[]
+}
+
+/** user_id no se envía: lo pone la base de datos (default auth.uid()) y el RLS comprueba que es el tuyo. */
+export async function anadirTareaManual(t: Omit<TareaManual, 'id'> & { plataforma: string }) {
+  const { error } = await supabase.from('entregas').insert({ ...t, origen: 'manual' })
+  if (error) throw error
+  avisarCambioEntregas()
+}
+
+export async function borrarTareaManual(id: string) {
+  const { error } = await supabase.from('entregas').delete().eq('id', id).eq('origen', 'manual')
+  if (error) throw error
+  avisarCambioEntregas()
 }

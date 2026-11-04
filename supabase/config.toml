@@ -434,3 +434,7 @@ verify_jwt = false
 
 [functions.abrir-tarea]
 verify_jwt = false
+
+# La llama pg_cron con un secreto propio (x-cron-secreto), no un usuario con sesión
+[functions.sincronizar-todo]
+verify_jwt = false

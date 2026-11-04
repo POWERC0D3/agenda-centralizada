@@ -83,7 +83,12 @@ export async function sincronizarConexion(db: SupabaseClient, c: Conexion): Prom
       id_externo: `${c.sitio}:${e.id}`,
       titulo: limpiarTitulo(e.name).slice(0, 200) || 'Tarea de Moodle',
       curso: e.course?.fullname ?? null,
-      asignatura_id: e.course ? (asignaturaDe.get(e.course.id) ?? adivinarAsignatura(e.course.fullname)) : null,
+      // Si el curso ya tiene asignatura guardada (adivinada o corregida a mano en Ajustes, también "ninguna"), manda esa
+      asignatura_id: e.course
+        ? asignaturaDe.has(e.course.id)
+          ? asignaturaDe.get(e.course.id)!
+          : adivinarAsignatura(e.course.fullname)
+        : null,
       fecha: new Date(e.timesort * 1000).toISOString(),
       url: e.url || null,
     }))

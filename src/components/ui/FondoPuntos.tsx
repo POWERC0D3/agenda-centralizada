@@ -70,7 +70,15 @@ export function FondoPuntos() {
     if (!cv || !g) return
 
     const reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const tinta = getComputedStyle(document.documentElement).getPropertyValue('--color-tinta').trim() || '#ededed'
+    // Color y opacidad de los puntos: del CSS (index.css), que los cambia con el tema
+    let color = '#ededed'
+    let opacidad = 0.32
+    const leerColores = () => {
+      const css = getComputedStyle(document.documentElement)
+      color = css.getPropertyValue('--puntos-color').trim() || color
+      opacidad = Number(css.getPropertyValue('--puntos-opacidad')) || opacidad
+    }
+    leerColores()
 
     let cols = 0, filas = 0, dpr = 1
     let raf = 0
@@ -93,8 +101,8 @@ export function FondoPuntos() {
       ondas(filas, tiempo, false, enY)
       g.setTransform(dpr, 0, 0, dpr, 0, 0)
       g.clearRect(0, 0, innerWidth, innerHeight)
-      g.fillStyle = tinta
-      g.globalAlpha = 0.32
+      g.fillStyle = color
+      g.globalAlpha = opacidad
       // Todos los cuadrados en un solo path: una única llamada a fill() por fotograma
       g.beginPath()
       for (let j = 0; j < filas; j++) {
@@ -126,6 +134,14 @@ export function FondoPuntos() {
       if (reducido) pintar()
     }
 
+    // Al entrar o salir de la landing cambia el tema (atributo data-tema de <html>): se vuelven a leer los colores.
+    // MutationObserver avisa cuando cambia un atributo del DOM (como un listener sobre una propiedad en Java)
+    const observador = new MutationObserver(() => {
+      leerColores()
+      if (reducido) pintar()
+    })
+    observador.observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] })
+
     medir()
     window.addEventListener('resize', redimensionar)
     if (reducido) pintar() // con movimiento reducido: trama quieta
@@ -133,6 +149,7 @@ export function FondoPuntos() {
 
     return () => {
       cancelAnimationFrame(raf)
+      observador.disconnect()
       window.removeEventListener('resize', redimensionar)
     }
   }, [])

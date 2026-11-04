@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const CLAVE = 'daw1a:modulos-excluidos'
 
@@ -20,45 +20,25 @@ function conmutar(prev: ReadonlySet<string>, id: string): Set<string> {
 }
 
 /**
- * Los módulos que NO cursas, en dos listas:
- * - permanentes: se eligen en Ajustes y se guardan en localStorage (el
- *   almacenamiento del navegador, parecido a un Map<String,String> persistente).
- * - temporales: se apagan con un clic en el horario y solo viven en memoria
- *   (estado de React): al recargar la página vuelven a estar encendidos.
- * El resto de la app solo necesita `excluidos`, la unión de ambas.
+ * Los módulos que NO cursas (convalidados): se eligen en Ajustes y se guardan en localStorage
+ * (el almacenamiento del navegador, parecido a un Map<String,String> persistente) y en la cuenta.
+ * Lo que se elige con un clic en el horario es otra cosa (la asignatura en foco) y vive en App.
  */
 export function useModulos() {
-  const [permanentes, setPermanentes] = useState<ReadonlySet<string>>(leer)
-  const [temporales, setTemporales] = useState<ReadonlySet<string>>(() => new Set())
+  const [excluidos, setExcluidos] = useState<ReadonlySet<string>>(leer)
 
   useEffect(() => {
     try {
-      localStorage.setItem(CLAVE, JSON.stringify([...permanentes]))
+      localStorage.setItem(CLAVE, JSON.stringify([...excluidos]))
     } catch {
       // sin almacenamiento disponible: funciona igual, solo que no se recuerda
     }
-  }, [permanentes])
+  }, [excluidos])
 
-  // useMemo: la unión solo se recalcula cuando cambia alguna de las dos listas
-  const excluidos = useMemo<ReadonlySet<string>>(() => new Set([...permanentes, ...temporales]), [permanentes, temporales])
-
-  const alternarTemporal = (id: string) => setTemporales((prev) => conmutar(prev, id))
-
-  // Lo que decides en Ajustes manda: si tenía un apagado temporal, se olvida
-  const alternarPermanente = (id: string) => {
-    setPermanentes((prev) => conmutar(prev, id))
-    setTemporales((prev) => {
-      if (!prev.has(id)) return prev
-      const nuevo = new Set(prev)
-      nuevo.delete(id)
-      return nuevo
-    })
-  }
-
-  const restablecer = () => setPermanentes(new Set())
-
+  const alternar = (id: string) => setExcluidos((prev) => conmutar(prev, id))
+  const restablecer = () => setExcluidos(new Set())
   // Sustituye la lista entera (al traer los ajustes de la cuenta desde otro dispositivo)
-  const establecerPermanentes = (ids: readonly string[]) => setPermanentes(new Set(ids))
+  const establecer = (ids: readonly string[]) => setExcluidos(new Set(ids))
 
-  return { excluidos, permanentes, alternarTemporal, alternarPermanente, restablecer, establecerPermanentes }
+  return { excluidos, alternar, restablecer, establecer }
 }

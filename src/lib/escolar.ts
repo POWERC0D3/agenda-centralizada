@@ -1,6 +1,6 @@
-import type { Clase, EntradaEscolar, Horario, TipoDiaEscolar } from '../types'
+import type { Clase, Horario, TipoDiaEscolar } from '../types'
 import { calendarioEscolar as cal } from './datos'
-import { diaSemana, diasEntre, horaAMinutos, inicioDelDia, isoLocal, parseFecha, sumarDias } from './fechas'
+import { diaSemana, horaAMinutos, inicioDelDia, isoLocal, parseFecha, sumarDias } from './fechas'
 import { clasesDelDia, type Excluidas } from './horario'
 
 // Límites del curso: la lupa del horario no navega fuera de ellos
@@ -51,18 +51,4 @@ export function proximaClase(horario: Horario, ahora: Date, excluir?: Excluidas)
     }
   }
   return null // verano o todo apagado
-}
-
-/** Fechas señaladas del curso (festivos, puentes, vacaciones…) que aún no han terminado. */
-export function entradasEscolares(ahora: Date): EntradaEscolar[] {
-  const lista: Omit<EntradaEscolar, 'dias'>[] = [
-    ...cal.dias.map((d) => ({ id: d.fecha, tipo: d.tipo, nombre: d.nombre, motivo: d.motivo, inicio: parseFecha(d.fecha), fin: parseFecha(d.fecha), url: d.url })),
-    ...cal.vacaciones.map((v) => ({ id: v.inicio, tipo: 'vacaciones' as const, nombre: v.nombre, inicio: parseFecha(v.inicio), fin: parseFecha(v.fin), url: v.url })),
-    { id: 'inicio', tipo: 'inicio' as const, nombre: 'Inicio de las clases', inicio: INICIO, fin: INICIO },
-    { id: 'fin', tipo: 'fin' as const, nombre: 'Fin de las clases', inicio: FIN, fin: FIN },
-  ]
-  return lista
-    .map((e) => ({ ...e, dias: diasEntre(ahora, e.inicio) }))
-    .filter((e) => diasEntre(ahora, e.fin) >= 0) // sin registro del pasado
-    .sort((a, b) => a.inicio.getTime() - b.inicio.getTime())
 }

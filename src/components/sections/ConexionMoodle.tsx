@@ -1,5 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { conectarMoodle, desconectarMoodle, misConexiones, sincronizarAhora, type ConexionMoodle as Conexion } from '../../lib/moodle'
+import { nombreAsignatura } from '../../lib/datos'
+import {
+  cambiarAsignaturaCurso,
+  conectarMoodle,
+  desconectarMoodle,
+  misConexiones,
+  misCursos,
+  sincronizarAhora,
+  type ConexionMoodle as Conexion,
+  type CursoMoodle,
+} from '../../lib/moodle'
 import { sonar } from '../../lib/sonido'
 
 // Cada sitio: su nombre, su dominio y qué pasa con la contraseña (hay que decirlo con claridad)
@@ -28,8 +38,67 @@ const SITIOS = {
   },
 } as const
 
+/**
+ * Los cursos de una conexión y la asignatura de cada uno (para el color y el nombre en la agenda).
+ * La sincronización la adivina por el nombre del curso; aquí se corrige si se equivoca.
+ */
+function CursosConexion({ conexionId, modulos, avisar }: { conexionId: string; modulos: string[]; avisar: (t: string) => void }) {
+  const [cursos, setCursos] = useState<CursoMoodle[] | null>(null)
+
+  useEffect(() => {
+    let vivo = true
+    misCursos(conexionId)
+      .then((c) => vivo && setCursos(c))
+      .catch(() => vivo && setCursos([]))
+    return () => {
+      vivo = false
+    }
+  }, [conexionId])
+
+  if (!cursos) return <p className="mt-2 text-xs text-tinta-suave">Cargando cursos…</p>
+  if (!cursos.length) return <p className="mt-2 text-xs text-tinta-suave">Aún no hay cursos: sincroniza primero.</p>
+
+  return (
+    <ul className="mt-2 space-y-1.5">
+      {cursos.map((c) => {
+        // Las asignaturas de tu grupo, y la que tenga ahora aunque sea de otro (para no perderla de la lista)
+        const opciones = c.asignatura_id && !modulos.includes(c.asignatura_id) ? [...modulos, c.asignatura_id] : modulos
+        return (
+          <li key={c.curso_id} className="flex items-center justify-between gap-3 text-xs">
+            <span className="min-w-0 truncate text-tinta-suave" title={c.nombre}>
+              {c.nombre}
+            </span>
+            <select
+              value={c.asignatura_id ?? ''}
+              aria-label={`Asignatura del curso ${c.nombre}`}
+              onChange={(e) => {
+                const nueva = e.target.value || null
+                setCursos((prev) => prev && prev.map((x) => (x.curso_id === c.curso_id ? { ...x, asignatura_id: nueva } : x)))
+                sonar('select', { volumen: 0.6 })
+                cambiarAsignaturaCurso(conexionId, c, nueva)
+                  .then(() => avisar(`${c.nombre}: ${nueva ? nombreAsignatura(nueva) : 'sin asignatura'}`))
+                  .catch(() => avisar('No se pudo cambiar la asignatura'))
+              }}
+              className="w-44 shrink-0 border border-linea bg-fondo px-2 py-1 text-xs text-tinta outline-none focus:border-arena"
+            >
+              <option value="">Sin asignatura</option>
+              {opciones.map((id) => (
+                <option key={id} value={id}>
+                  {nombreAsignatura(id)}
+                </option>
+              ))}
+            </select>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 type Props = {
   sitio: keyof typeof SITIOS
+  /** Las asignaturas del grupo del alumno (para corregir la de cada curso) */
+  modulos: string[]
   haySesion: boolean
   avisar: (texto: string) => void
   /** Se ha usado (conectar, sincronizar…): en la configuración guiada, enseña la siguiente sección */
@@ -52,7 +121,8 @@ const boton = 'border border-linea px-3.5 py-1.5 text-sm transition-colors disab
  * La conexión con el Moodle del centro (aula.iesmontenaranco.com).
  * La contraseña solo viaja a la Edge Function, que pide a Moodle un acceso (token) y la olvida.
  */
-export function ConexionMoodle({ sitio, haySesion, avisar, onUsar }: Props) {
+export function ConexionMoodle({ sitio, modulos, haySesion, avisar, onUsar }: Props) {
+  const [verCursos, setVerCursos] = useState(false)
   const info = SITIOS[sitio]
   const [conexion, setConexion] = useState<Conexion | null | undefined>(undefined) // undefined = cargando
   const [formulario, setFormulario] = useState(false)
@@ -168,6 +238,21 @@ export function ConexionMoodle({ sitio, haySesion, avisar, onUsar }: Props) {
             ? conexion.ultimo_error
             : `Conectado como ${conexion.usuario}${conexion.ultimo_sync ? ` · sincronizado ${hace(conexion.ultimo_sync)}` : ''}`}
         </p>
+      )}
+
+      {/* Cursos: de qué asignatura es cada uno (desplegable) */}
+      {haySesion && conexion && (
+        <div className="mt-2">
+          <button
+            type="button"
+            aria-expanded={verCursos}
+            onClick={() => setVerCursos((v) => !v)}
+            className="text-xs text-tinta-suave underline-offset-4 transition-colors hover:text-tinta hover:underline"
+          >
+            {verCursos ? 'Ocultar cursos' : 'Cursos y asignaturas'}
+          </button>
+          {verCursos && <CursosConexion conexionId={conexion.id} modulos={modulos} avisar={avisar} />}
+        </div>
       )}
 
       {/* Formulario: usuario y contraseña de Moodle */}

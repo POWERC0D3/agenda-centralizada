@@ -3,6 +3,12 @@
 /** Web del centro: destino por defecto de los enlaces externos */
 export const URL_CENTRO = 'https://alojaweb.educastur.es/web/iesmontenaranco'
 
+/**
+ * Calendario compartido con el profesorado. Vive FUERA de esta web (Microsoft 365): los permisos se gestionan allí.
+ * Por ahora lleva al calendario de Outlook; para un Excel o un calendario concreto, pega aquí su enlace de "Compartir"
+ */
+export const URL_CALENDARIO_COMPARTIDO = 'https://outlook.office.com/calendar/'
+
 /** La web madre (alvaro.cloud): el tejado del logo lleva a ella */
 export const URL_ORIGEN = 'https://alvaro.cloud'
 

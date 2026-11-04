@@ -37,10 +37,10 @@ En escritorio el panel ocupa **exactamente la pantalla, sin scroll**. En móvil 
 | Celda | Qué muestra |
 |---|---|
 | **Cabecera** | A la izquierda, la cuenta atrás hasta la próxima prueba o entrega; a la derecha, hasta la próxima clase. El nombre de la asignatura va en su color. Lleva un efecto de cristal esmerilado. En móvil, las dos cuentas atrás pasan a una segunda fila. |
-| **Horario** | La semana de clases. Una **lupa de cristal (WebGL)** marca el día elegido; se mueve con la rueda del ratón, con las flechas o pulsando el nombre del día, y al pasar del viernes salta de semana. Al pasar el ratón por una asignatura se iluminan todas sus horas; un clic la "apaga" de forma temporal. En móvil, pestañas por día y cada clase mide lo que dura (una de 2 horas ocupa el doble), con huecos "Libre" donde no hay clase. |
-| **Calendario** | Dos modos: **Exámenes** (mes con marcas de color + lista agrupada por semanas, con filtros) y **Escolar** (festivos, días no lectivos y vacaciones del curso 2026-2027). Pulsar un día del mes salta a su prueba en la lista. En móvil la lista tiene una altura máxima y scroll propio, para no alargar la página. |
+| **Horario** | La semana de clases. Una **lupa de cristal (WebGL)** marca el día elegido; se mueve con la rueda del ratón, con las flechas o pulsando el nombre del día, y al pasar del viernes salta de semana. Al pasar el ratón por una asignatura se iluminan todas sus horas; un clic la pone **en foco**: se queda encendida, el resto se atenúa y la Agenda y el Calendario muestran solo lo suyo (otro clic en ella, todo otra vez). En móvil, pestañas por día y cada clase mide lo que dura (una de 2 horas ocupa el doble), con huecos "Libre" donde no hay clase. |
+| **Calendario** | Dos pestañas: **Exámenes** (la que se abre por defecto: los del grupo y la sesión de evaluación) y **Entregas** (con las atrasadas arriba). Cada una con su mes con marcas de color y su lista agrupada por semanas. Pulsar un día del mes salta a su prueba en la lista. En móvil la lista tiene una altura máxima y scroll propio, para no alargar la página. |
 | **Logo 3D** | El logo del IES dibujado con puntos como un objeto 3D que gira hacia el ratón (en el móvil, al inclinar el teléfono, con el giroscopio). Sus partes son botones: el **tejado** lleva a [alvaro.cloud](https://alvaro.cloud) (*Origen*, la web madre), la **puerta central** a *Login* (iniciar sesión), la **puerta derecha** a *Ajustes* y la **puerta izquierda** a la web del instituto. |
-| **Agenda** | Las tareas del día elegido en la lupa, deducidas de las pruebas y del horario ("Termina…", "Repasa…", "Reparte el repaso"…). Se pueden marcar como hechas. Aparece con un efecto de escritura después de un breve estado de "pensando". |
+| **Agenda** | Las tareas del día elegido en la lupa: exámenes y entregas mezclados y ordenados por prioridad ("Atrasada…", "Termina…", "Repasa…", "Empieza…"), **solo de las asignaturas que ese día de la semana tienen en el horario** (aunque sea festivo) o que vencen ese mismo día; en fin de semana, todo. Se pueden marcar como hechas. Aparece con un efecto de escritura después de un breve estado de "pensando". |
 
 ### Ajustes (`#/ajustes`)
 - **Tu cuenta:** con quién has iniciado sesión y "Cerrar sesión" (o "Iniciar sesión" si no hay sesión).
@@ -208,10 +208,10 @@ Para añadir otro grupo: crear `src/data/grupos/<grupo>/` con su `horario.json` 
 Es una **versión 1** con un backend recién estrenado. Lo que conviene saber:
 
 - **Solo hay datos de DAW 1º A.** Los demás grupos muestran un aviso de "sin datos".
-- **Moodle del centro conectado:** desde Ajustes → Sincronizar, las entregas pendientes de aula.iesmontenaranco.com aparecen en la Agenda y el Calendario (de momento con el botón "Sincronizar ahora"; la sincronización automática llegará después). Mis Aulas y las tareas de Teams a mano, más adelante.
+- **Entregas reales de las plataformas del instituto:** desde Ajustes → Sincronizar se conectan el Moodle del centro y Mis Aulas, que se **sincronizan solos cada 30 minutos**. Las tareas de **Teams se añaden a mano** en la misma sección. Todas salen en la Agenda y el Calendario con una etiqueta de su origen, y al pulsarlas se abren en su web con la sesión iniciada.
 - **Todo en la cuenta:** ajustes, tareas hechas y entregas se sincronizan entre dispositivos. Se puede **borrar la cuenta** con todos sus datos desde Ajustes.
 - **Política de privacidad** publicada en `#/privacidad` (ver [docs/PRIVACIDAD.md](docs/PRIVACIDAD.md)).
-- **Datos de prueba:** `examenes.json` incluye entregas **inventadas** (5, 6, 9, 10, 12, 17 y 25 de noviembre; 1 y 3 de diciembre) para probar la Agenda. Hay que quitarlas cuando lleguen las fechas reales.
+- **Exámenes del JSON, entregas de las webs:** `examenes.json` solo trae exámenes; las entregas vienen todas de la cuenta.
 - **Sin sonido hasta el primer clic:** es la política de autoplay de los navegadores; el audio arranca con el primer clic o tecla.
 - **Pendiente conocido:** los módulos apagados se guardan con una clave común a todos los grupos.
 
@@ -228,18 +228,11 @@ El objetivo es que cada alumno vea **todas sus entregas juntas**, vengan de dond
 | Moodle "Mis Aulas" (aulas2.site) | API apagada → la misma vía interna que usa su web, con la contraseña cifrada |
 | Microsoft Teams (Educastur) | No se puede automatizar (Educastur bloquea las apps externas) → **tareas añadidas a mano** |
 
-Hecho: backend en Supabase, tabla `entregas` con RLS y login y registro reales.
-
-Pendiente, en este orden:
-1. Formulario para añadir tareas a mano.
-2. Conectar Moodle (método A).
-3. Sincronización cada 30 minutos.
-4. Método B.
+Hecho: backend en Supabase con RLS, login y registro reales, los dos Moodle conectados (métodos A y B), sincronización automática cada 30 minutos con `pg_cron`, corrección de la asignatura de cada curso, tareas de Teams a mano y política de privacidad. Detalle en [docs/BACKEND.md §12](docs/BACKEND.md#12-sincronización-automática-cursos-y-tareas-a-mano-3-nov-2026).
 
 ### Otras ideas
 - Datos de todos los grupos.
 - Teams automático con el calendario ICS o Power Automate (aparcado, ver [INTEGRACIONES.md §4](docs/INTEGRACIONES.md#4-teams-qué-se-ha-probado-y-por-qué-no-se-puede-automatizar)).
-- Política de privacidad antes de abrirlo a más alumnos.
 - Despliegue automático en cada `push` (GitHub Actions → S3).
 - Tests automáticos (las comprobaciones de este proyecto se hicieron con scripts de Puppeteer fuera del repositorio).
 

@@ -93,10 +93,12 @@ export function Privacidad() {
               </>,
             ],
             ['Si conectas Moodle o Mis Aulas: tus cursos y tus entregas pendientes (título, fecha, enlace)', 'Mostrarlas en la agenda y el calendario.'],
+            ['Las tareas que añades a mano (las de Teams): título, fecha, asignatura y enlace', 'Mostrarlas en la agenda y el calendario. Solo lo que tú escribes.'],
           ]}
         />
         <p>
-          <strong>No guardamos</strong> tus notas, tus mensajes, los archivos que entregas ni ningún dato de Teams.
+          <strong>No guardamos</strong> tus notas, tus mensajes, los archivos que entregas ni nada de tu cuenta de Teams: de Teams, solo lo
+          que tú apuntes a mano.
         </p>
         <p>
           <strong>Sin publicidad ni analítica:</strong> no hay cookies de seguimiento ni estadísticas. La web guarda algunos datos en tu
@@ -121,7 +123,11 @@ export function Privacidad() {
             ['Cloudflare', 'Dirige el dominio a la web (DNS); no guarda tus datos', '—'],
           ]}
         />
-        <p>Si conectas Moodle o Mis Aulas, el servidor habla con aula.iesmontenaranco.com o aulas2.site en tu nombre para leer tus entregas.</p>
+        <p>
+          Si conectas Moodle o Mis Aulas, el servidor habla con aula.iesmontenaranco.com o aulas2.site en tu nombre para leer tus entregas:
+          solo, cada 30 minutos (en Mis Aulas, como mucho cada 2 horas), y cuando pulsas «Sincronizar ahora». Al abrir una tarea, tu
+          navegador usa tu clave para entrar en Moodle con tu sesión iniciada.
+        </p>
       </Seccion>
 
       <Seccion titulo="5. Cuánto tiempo">

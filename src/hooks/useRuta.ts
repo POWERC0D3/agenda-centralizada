@@ -2,6 +2,13 @@ import { useSyncExternalStore } from 'react'
 
 export type Ruta = 'panel' | 'ajustes' | 'entrar' | 'crear' | 'privacidad'
 
+/**
+ * Ir a otra página con la cortina de píxeles, que nace en `centro` (el botón pulsado).
+ * `mensaje`, si lo hay, se enseña al llegar. Lo implementa App y lo reciben las páginas como prop:
+ * un tipo de función con nombre, como una interfaz funcional de Java
+ */
+export type Navegar = (ruta: Ruta, centro: { x: number; y: number }, mensaje?: string) => void
+
 // Cada ruta ↔ su hash en la URL (como un @RequestMapping, pero en el navegador)
 const HASH: Record<Ruta, string> = { panel: '/', ajustes: '/ajustes', entrar: '/entrar', crear: '/crear', privacidad: '/privacidad' }
 

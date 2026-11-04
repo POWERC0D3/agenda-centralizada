@@ -31,6 +31,15 @@ function inicioDePrueba(e: EventoConDias, horario: Horario | null): Date {
   return d
 }
 
+/** Lo que necesita una cuenta atrás, sin decir cómo se pinta: lo usan la versión de escritorio y la de móvil. */
+type DatosCuenta = {
+  etiqueta: string
+  asignatura: string | null
+  nombre: string
+  hasta: Date
+  titulo: string
+}
+
 /**
  * "Próxima clase Programación · en 63 h 07 min": el nombre en el color de su asignatura.
  * Con `horaPrimero` (lado izquierdo) la hora va delante, pegada a la esquina: "en 63 h 07 min · Próxima prueba Inglés".
@@ -44,13 +53,8 @@ function Cuenta({
   titulo,
   horaPrimero = false,
   className = '',
-}: {
-  etiqueta: string
-  asignatura: string | null
-  nombre: string
-  hasta: Date
+}: DatosCuenta & {
   reloj: Date
-  titulo: string
   horaPrimero?: boolean
   className?: string
 }) {
@@ -84,6 +88,33 @@ function Cuenta({
   )
 }
 
+/**
+ * Móvil: tarjeta de tres líneas, de lo general a lo concreto (qué es · cuál · cuándo),
+ * para leerla de un vistazo en vez de una frase larga. Sin datos, un guion.
+ */
+function CuentaMovil({ etiqueta, datos, reloj, className = '' }: { etiqueta: string; datos: DatosCuenta | null; reloj: Date; className?: string }) {
+  return (
+    <div className={`min-w-0 ${className}`} title={datos?.titulo}>
+      <dt className="text-[0.62rem] tracking-wider uppercase">{etiqueta}</dt>
+      {datos ? (
+        <>
+          <dd
+            className="mt-0.5 truncate text-[0.82rem] font-medium text-(--c)"
+            style={{ '--c': colorAsignatura(datos.asignatura) } as CSSProperties}
+          >
+            {datos.nombre}
+          </dd>
+          <dd>
+            <Odometro texto={`en ${textoFalta(reloj, datos.hasta)}`} className="font-mono text-tinta" />
+          </dd>
+        </>
+      ) : (
+        <dd className="mt-0.5 font-mono text-tinta">—</dd>
+      )}
+    </div>
+  )
+}
+
 type Props = {
   horario: Horario | null
   lista: EventoConDias[]
@@ -106,44 +137,31 @@ export function Cabecera({ horario, lista, excluidas, grupo }: Props) {
     .map((e) => ({ e, inicio: inicioDePrueba(e, horario) }))
     .find((p) => p.inicio > reloj)
 
-  // Las dos cuentas atrás se definen una vez y se colocan en dos sitios: a los lados del título (escritorio)
-  // o en una segunda fila, una debajo de otra (móvil, donde no caben junto al título)
-  const cuentaPrueba = (className: string) =>
-    prueba && (
-      <Cuenta
-        etiqueta={prueba.e.tipo === 'entrega' ? 'Próxima entrega' : 'Próxima prueba'}
-        horaPrimero
-        asignatura={prueba.e.asignatura}
-        nombre={prueba.e.asignatura ? nombreAsignatura(prueba.e.asignatura) : (prueba.e.detalle ?? 'Evaluación')}
-        hasta={prueba.inicio}
-        reloj={reloj}
-        titulo={`${formatoLargo(prueba.inicio)}${prueba.e.detalle ? ` · ${prueba.e.detalle}` : ''}`}
-        className={className}
-      />
-    )
-  const cuentaClase = (className: string, horaPrimero = false) =>
-    clase ? (
-      <Cuenta
-        etiqueta="Próxima clase"
-        horaPrimero={horaPrimero}
-        asignatura={clase.clase.asignatura}
-        nombre={nombreAsignatura(clase.clase.asignatura)}
-        hasta={clase.inicio}
-        reloj={reloj}
-        titulo={`${formatoLargo(clase.inicio)} a las ${clase.clase.inicio}`}
-        className={className}
-      />
-    ) : (
-      <div className={`gap-1.5 ${className}`}>
-        <dt>Próxima clase</dt>
-        <dd className="font-mono">—</dd>
-      </div>
-    )
+  // Los datos de las dos cuentas atrás se calculan una vez y se pintan de dos formas: a los lados del título
+  // (escritorio) o en dos tarjetas bajo él (móvil, donde no caben junto al título)
+  const datosPrueba: DatosCuenta | null = prueba
+    ? {
+        etiqueta: prueba.e.tipo === 'entrega' ? 'Próxima entrega' : 'Próxima prueba',
+        asignatura: prueba.e.asignatura,
+        nombre: prueba.e.asignatura ? nombreAsignatura(prueba.e.asignatura) : (prueba.e.detalle ?? 'Evaluación'),
+        hasta: prueba.inicio,
+        titulo: `${formatoLargo(prueba.inicio)}${prueba.e.detalle ? ` · ${prueba.e.detalle}` : ''}`,
+      }
+    : null
+  const datosClase: DatosCuenta | null = clase
+    ? {
+        etiqueta: 'Próxima clase',
+        asignatura: clase.clase.asignatura,
+        nombre: nombreAsignatura(clase.clase.asignatura),
+        hasta: clase.inicio,
+        titulo: `${formatoLargo(clase.inicio)} a las ${clase.clase.inicio}`,
+      }
+    : null
 
   return (
     <header data-tutorial="cabecera" className="cristal relative z-30 shrink-0 border-b border-linea bg-fondo/60 px-4 text-xs text-tinta-suave">
       <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <dl className="flex min-w-0">{cuentaPrueba('hidden md:flex')}</dl>
+        <dl className="flex min-w-0">{datosPrueba && <Cuenta {...datosPrueba} reloj={reloj} horaPrimero className="hidden md:flex" />}</dl>
 
         <div className="flex items-center gap-2.5">
           <h1 className="font-titulo text-base font-bold tracking-tight whitespace-nowrap text-tinta">Monte Naranco Agenda Digital</h1>
@@ -155,13 +173,22 @@ export function Cabecera({ horario, lista, excluidas, grupo }: Props) {
           </span>
         </div>
 
-        <dl className="flex min-w-0 justify-end">{cuentaClase('hidden md:flex')}</dl>
+        <dl className="flex min-w-0 justify-end">
+          {datosClase ? (
+            <Cuenta {...datosClase} reloj={reloj} className="hidden md:flex" />
+          ) : (
+            <div className="hidden gap-1.5 md:flex">
+              <dt>Próxima clase</dt>
+              <dd className="font-mono">—</dd>
+            </div>
+          )}
+        </dl>
       </div>
 
-      {/* Móvil: segunda fila con las dos cuentas, la hora delante para que queden alineadas */}
-      <dl className="-mt-1.5 grid gap-1 pb-2.5 md:hidden">
-        {cuentaPrueba('flex')}
-        {cuentaClase('flex', true)}
+      {/* Móvil: dos tarjetas lado a lado (grid de 2 columnas) separadas por una línea fina */}
+      <dl className="grid grid-cols-2 border-t border-linea/70 py-2 md:hidden">
+        <CuentaMovil etiqueta={datosPrueba?.etiqueta ?? 'Próxima prueba'} datos={datosPrueba} reloj={reloj} className="pr-3" />
+        <CuentaMovil etiqueta="Próxima clase" datos={datosClase} reloj={reloj} className="border-l border-linea/70 pl-3" />
       </dl>
     </header>
   )

@@ -19,7 +19,8 @@ Cómo y por qué la agenda pasó de ser una web solo de frontend a tener **cuent
 9. [Pruebas realizadas](#9-pruebas-realizadas)
 10. [Cómo trabajar con la base de datos](#10-cómo-trabajar-con-la-base-de-datos)
 11. [Lo añadido después](#11-lo-añadido-después-2-nov-2026)
-12. [Próximos pasos](#12-próximos-pasos)
+12. [Sincronización automática, cursos y tareas a mano](#12-sincronización-automática-cursos-y-tareas-a-mano-3-nov-2026)
+13. [Próximos pasos](#13-próximos-pasos)
 
 ---
 
@@ -60,9 +61,9 @@ Supabase es un **backend ya montado**. En vez de programar y mantener un servido
 Encaja punto por punto con el plan de [INTEGRACIONES.md](INTEGRACIONES.md#5-plan-de-arquitectura):
 - **Auth** sustituye el login de mentira de la landing.
 - **Postgres + RLS** guarda las entregas de cada alumno por separado.
-- **Edge Functions** conectarán con Moodle.
-- **pg_cron** sincronizará cada 30 minutos.
-- **Vault** cifrará las contraseñas que lo necesiten (método B).
+- **Edge Functions** conectan con Moodle.
+- **pg_cron** sincroniza cada 30 minutos (ver §12).
+- **Vault** guarda el secreto con el que pg_cron llama a la sincronización.
 
 **Plan gratuito:** 500 MB de base de datos, 50.000 usuarios activos al mes y Edge Functions de sobra para un grupo de clase. Tiene una pega: **pausa el proyecto tras una semana sin actividad**, y queda comprobar si `pg_cron` cuenta como actividad.
 
@@ -121,6 +122,7 @@ Guarda las entregas y exámenes de cada alumno, **vengan de donde vengan**:
 | `id` | `uuid`, PK | Identificador (`gen_random_uuid()`) |
 | `user_id` | `uuid` → `auth.users` | Dueño. **Por defecto `auth.uid()`**: el frontend no lo envía, lo pone la base de datos |
 | `origen` | `'manual' \| 'moodle'` | De dónde viene: a mano o de la sincronización |
+| `plataforma` | `text`, 1-40 caracteres | Solo en las manuales: de qué plataforma son (`'Teams'`), para su etiqueta en la Agenda. Añadida el 3 nov (§12) |
 | `tipo` | `'entrega' \| 'examen'` | Igual que los eventos del JSON actual |
 | `conexion_id`, `id_externo` | | Solo para lo que venga de Moodle: de qué conexión y con qué id |
 | `titulo` | `text`, 1-200 caracteres | Qué hay que entregar |
@@ -166,6 +168,7 @@ El `auth.uid()` va dentro de un `select` entre paréntesis por recomendación of
 
 - **Registro** (`supabase.auth.signUp`): correo, contraseña de al menos 6 caracteres y nombre. El nombre se guarda en los **metadatos del usuario** (`user_metadata.nombre`), sin tabla aparte. Como la confirmación de correo está desactivada, devuelve la sesión al momento.
 - **Login** (`supabase.auth.signInWithPassword`).
+- **Repetir la bienvenida:** desde Ajustes se puede marcar la cuenta (`user_metadata.repetir_bienvenida`, con `supabase.auth.updateUser`) para que el próximo inicio de sesión, en cualquier dispositivo, lleve otra vez a la configuración guiada y al tutorial. El login borra la marca al usarla. No hace falta tabla ni migración, y los datos no se tocan: solo cambia cómo se enseñan.
 - **Sesión:** `supabase-js` la guarda en `localStorage` y renueva el token solo. Al recargar, sigues dentro.
 - **Errores en español,** traducidos por su **código** y no por el texto, que puede cambiar (en Java sería capturar la excepción por su tipo y no comparar `getMessage()`):
 
@@ -242,10 +245,56 @@ npx supabase functions deploy --use-api
 npx supabase secrets set CLAVE_CIFRADO=…   # 32 bytes en base64; si se pierde, hay que reconectar Moodle
 ```
 
-## 12. Próximos pasos
+## 12. Sincronización automática, cursos y tareas a mano (3 nov 2026)
 
-Según el plan de [INTEGRACIONES.md §7](INTEGRACIONES.md#7-próximos-pasos):
-1. **`pg_cron`** para sincronizar Moodle cada ~30 minutos sin pulsar nada (y comprobar de paso si evita la pausa del plan gratuito).
-2. **Corregir desde Ajustes la asignatura de cada curso de Moodle** (la tabla `cursos_moodle` ya lo permite).
-3. **Formulario para añadir tareas a mano** (Teams y lo que no tenga integración), con `origen = 'manual'`.
-4. **Método B** (aulas2.site) con la contraseña cifrada, con la misma llave que los tokens.
+| Migración / función | Qué hace |
+|---|---|
+| `20261103120000_privatetoken.sql` | Guarda también el `privatetoken` de Moodle (cifrado), necesario para pedir la clave de **autologin** |
+| `functions/abrir-tarea` | Devuelve a su dueño, y solo a él, lo necesario para que **el navegador** pida a Moodle el enlace con sesión iniciada (la clave de Moodle va ligada a la IP de quien la pide) |
+| `20261103180000_sincronizacion_automatica.sql` | Activa `pg_cron` y `pg_net`, crea el secreto en Vault y programa la sincronización cada 30 minutos |
+| `functions/sincronizar-todo` | Sincroniza las conexiones de **todos** los alumnos. Solo la puede disparar pg_cron |
+| `20261103180100_plataforma_tareas_manuales.sql` | Columna `plataforma` en `entregas` |
+
+### 12.1 Cada 30 minutos, sin pulsar nada
+
+```
+pg_cron ('*/30 * * * *')                       ≈ @Scheduled(cron = "0 */30 * * * *")
+  └─ pg_net: POST /functions/v1/sincronizar-todo
+       cabecera x-cron-secreto ← Vault
+         └─ sincronizar-todo
+              ├─ comprueba el secreto (comparación en tiempo constante)
+              └─ de 3 en 3: sincronizarConexion()  (el mismo código que el botón "Sincronizar ahora")
+```
+
+**El secreto no está en el repositorio.** Lo genera la propia migración dentro de Postgres (`gen_random_bytes(32)`) y lo guarda cifrado en **Vault**. La función lo compara con el que le devuelve `secreto_cron()`, una función `security definer` que solo puede ejecutar `service_role`. Así nadie de fuera puede disparar una sincronización masiva, aunque la función tenga `verify_jwt = false`.
+
+**Cortesía con las webs del instituto:**
+- Conexiones de 3 en 3, no todas a la vez.
+- **Mis Aulas** (método B) inicia sesión en cada sincronización: como mucho **una vez cada 2 horas**, no cada 30 minutos.
+- Si Moodle ya rechazó la contraseña o el token, **no se insiste**: muchos intentos fallidos podrían bloquear la cuenta del alumno. Se espera a que vuelva a conectar, lo que borra el error.
+
+**Comprobar que funciona** (SQL Editor del panel):
+```sql
+select status, return_message, start_time from cron.job_run_details order by start_time desc limit 5;
+select status_code, content from net._http_response order by created desc limit 5;
+-- content: {"revisadas":…, "saltadas":…, "correctas":…, "fallos":…}
+```
+
+### 12.2 Corregir la asignatura de cada curso
+
+La sincronización **adivina** la asignatura de cada curso por su nombre (`_shared/asignaturas.ts`). En **Ajustes → Sincronizar → Cursos y asignaturas** el alumno la corrige con un desplegable:
+- El navegador actualiza `cursos_moodle.asignatura_id` (el único campo que `authenticated` puede cambiar: permiso por columna) y, al momento, el de sus entregas.
+- La siguiente sincronización **respeta** lo guardado: solo adivina los cursos nuevos. "Sin asignatura" también se respeta.
+
+### 12.3 Tareas de Teams a mano
+
+Teams no se puede leer (ver [INTEGRACIONES.md §4](INTEGRACIONES.md#4-teams-qué-se-ha-probado-y-por-qué-no-se-puede-automatizar)), así que en **Ajustes → Sincronizar → Teams** hay un formulario: título, fecha (y hora opcional; sin hora, las 23:59), asignatura y enlace opcional.
+- Se insertan **directamente desde el navegador** en `entregas` con `origen = 'manual'` y `plataforma = 'Teams'`: no hace falta Edge Function, porque el RLS ya garantiza que cada uno solo crea y borra las suyas.
+- La sincronización **nunca las toca**: solo borra filas de su `conexion_id`, y las manuales lo tienen a `null`.
+- Salen en la Agenda y el Calendario con la etiqueta **TEAMS**, como las de Moodle con la suya.
+
+## 13. Próximos pasos
+
+1. **Comprobar el autologin** al abrir una tarea (consola del navegador: línea `[Agenda]`).
+2. Comprobar si las llamadas de `pg_cron` evitan la **pausa del plan gratuito** tras una semana sin visitas.
+3. **Teams automático** con el calendario ICS o Power Automate (aparcado, [INTEGRACIONES.md §4](INTEGRACIONES.md#4-teams-qué-se-ha-probado-y-por-qué-no-se-puede-automatizar)).

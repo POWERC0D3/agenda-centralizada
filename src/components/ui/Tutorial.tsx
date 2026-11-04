@@ -11,33 +11,41 @@ import { sonar } from '../../lib/sonido'
 
 type Paso = { marca: string; titulo: string; texto: string; textoMovil?: string }
 
-// `marca` = el data-tutorial de cada celda (Panel `tutorial`, y la cabecera)
+// `marca` = el data-tutorial de cada celda (Panel `tutorial`, y la cabecera).
+// Orden: de lo más importante (qué hago hoy) a lo que se usa menos (el menú, que lleva a Ajustes)
 const PASOS: Paso[] = [
+  {
+    marca: 'agenda',
+    titulo: 'Tu plan del día',
+    texto:
+      'Lo que toca estudiar y entregar, ordenado por prioridad. Márcalo al terminarlo. Si viene del aula virtual, pulsa su nombre y se abre allí.',
+  },
   {
     marca: 'horario',
     titulo: 'Horario',
-    texto: 'Tu semana de clases. La lupa marca el día que ves en la Agenda: muévela con la rueda, las flechas o pulsando un día.',
-    textoMovil: 'Tu semana de clases. Elige el día en las pestañas: cada clase mide lo que dura.',
-  },
-  {
-    marca: 'agenda',
-    titulo: 'Agenda',
-    texto: 'Lo que te toca hacer ese día, sacado de tus exámenes y entregas. Márcalo cuando lo termines.',
+    texto:
+      'Tu semana. La lupa elige el día que ves en la Agenda: muévela con la rueda, las flechas o pulsando un día. Pulsa una asignatura para ver solo lo suyo.',
+    textoMovil:
+      'Tu semana: elige el día en las pestañas. Toca una asignatura y la Agenda y el Calendario se quedan solo con lo suyo.',
   },
   {
     marca: 'calendario',
     titulo: 'Calendario',
-    texto: 'Tus exámenes y entregas del mes, o el calendario escolar con festivos y vacaciones. Pulsa un día para ir a su prueba.',
-  },
-  {
-    marca: 'logo',
-    titulo: 'El logo es el menú',
-    texto: 'Tejado: alvaro.cloud. Puerta central: tu cuenta. Puerta derecha: ajustes. Puerta izquierda: la web del instituto.',
+    texto:
+      'Exámenes y entregas, cada uno en su pestaña, con las atrasadas arriba. Pulsa un día para saltar a su prueba. Debajo, el calendario del profesorado.',
   },
   {
     marca: 'cabecera',
     titulo: 'Cuenta atrás',
-    texto: 'Arriba, cuánto falta para tu próxima prueba y para tu próxima clase.',
+    texto: 'Arriba, cuánto falta para tu próxima prueba o entrega y para tu próxima clase.',
+  },
+  {
+    marca: 'logo',
+    titulo: 'El logo es el menú',
+    texto:
+      'Puerta derecha: Ajustes, donde conectas el aula virtual y Mis Aulas y apuntas lo de Teams. Central: tu cuenta. Izquierda: la web del instituto. ¿Dudas? Deja el ratón sobre el título de cualquier celda.',
+    textoMovil:
+      'Puerta derecha: Ajustes, donde conectas el aula virtual y Mis Aulas y apuntas lo de Teams. Central: tu cuenta. Izquierda: la web del instituto.',
   },
 ]
 
