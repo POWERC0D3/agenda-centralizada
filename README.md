@@ -32,7 +32,7 @@ Esta web los junta en una pantalla y responde a una pregunta: **¿qué hago hoy?
 - **Agenda del día:** exámenes y entregas ordenados por prioridad ("Atrasada…", "Termina…", "Repasa…"), solo de las asignaturas que tienes ese día. Cada tarea se marca como hecha y, si viene del aula virtual, se abre con un clic.
 - **Horario con lupa de cristal (WebGL):** la lupa marca el día elegido. Al pulsar una asignatura, toda la web se centra en ella.
 - **Calendario** de exámenes y de entregas, con las atrasadas arriba, y **cuentas atrás** hasta la próxima prueba y la próxima clase.
-- **Entregas automáticas:** el Moodle del centro y Mis Aulas se sincronizan solos cada 30 minutos. Las de Teams se apuntan a mano.
+- **Entregas automáticas:** el Moodle del centro se sincroniza solo cada 30 minutos, y Mis Aulas cada 2 horas ([por qué](#4-las-plataformas-del-instituto-no-están-pensadas-para-esto)). Las de Teams se apuntan a mano.
 - **Cuentas:** registro, inicio de sesión y borrado de la cuenta con contraseña. Todo se sincroniza entre el móvil y el ordenador.
 - **Configuración:** grupo, asignaturas convalidadas, sonido y animaciones simplificadas.
 - **Primera visita:** configuración guiada paso a paso y un tutorial de 15 segundos.
@@ -47,6 +47,12 @@ En escritorio, el panel cabe exacto en la pantalla, sin scroll. En el móvil, la
 | **Panel** | ![Panel en escritorio](docs/img/escritorio-panel.png) | <img src="docs/img/movil-panel.png" alt="Panel en móvil" width="240"> |
 | **Landing** | ![Landing en escritorio](docs/img/escritorio-landing.png) | <img src="docs/img/movil-landing.png" alt="Landing en móvil" width="240"> |
 | **Ajustes** | ![Ajustes en escritorio](docs/img/escritorio-ajustes.png) | <img src="docs/img/movil-ajustes.png" alt="Ajustes en móvil" width="240"> |
+
+**El logo en ASCII.** Al pasar el ratón, los puntos del logo se convierten en caracteres (`. : - = + * # % @`) según el "calor" que deja el cursor, y al pulsar, una onda recorre el logo. Está hecho a mano en Canvas, a partir de una de las [referencias artísticas](#inspiración-artística).
+
+<img src="docs/img/escritorio-logo-ascii.png" alt="Detalle del logo 3D: alrededor del cursor, los puntos se convierten en caracteres ASCII cada vez más densos" width="720">
+
+<sub>Detalle ampliado y con el efecto intensificado para que se aprecie en una imagen fija. En la web es más sutil.</sub>
 
 | Tutorial de la primera visita | Horario en el móvil |
 |---|---|
@@ -123,7 +129,11 @@ Cada decisión visual tiene un motivo:
 
 ### Inspiración artística
 
-Antes de escribir código reuní referencias visuales. De cada una tomé **una sola idea** y la adapté a la identidad del instituto:
+Antes de escribir código reuní referencias visuales. De cada una tomé **una sola idea** y la adapté a la identidad del instituto.
+
+<img src="referencias/inspiracion3-cubo-pensando-1.jpg" alt="Referencia: un cubo dibujado solo con puntos junto a un bloque «Thinking» que va mostrando pasos" width="560">
+
+*Una de las referencias: un objeto 3D hecho solo de puntos junto a una interfaz que enseña que está "pensando". De ella salió el estado "pensando" de la agenda, y reforzó la idea de construir el logo 3D solo con puntos.*
 
 | Referencia | La idea | En qué se convirtió |
 |---|---|---|
@@ -133,18 +143,7 @@ Antes de escribir código reuní referencias visuales. De cada una tomé **una s
 | Landing con flores ASCII | Página clara, titular grande | La landing clara |
 | Rastro del ratón en ASCII | Calor que convierte puntos en caracteres | La estela del ratón sobre el logo |
 
-### Lo que decidí no hacer
-
-Quitar también es diseñar. La versión final tiene menos cosas que cualquiera de las anteriores:
-
-| Idea | Por qué la descarté |
-|---|---|
-| Un haz de luz barriendo la próxima prueba | Demasiado efecto para un solo dato. |
-| Un efecto de texto "hacker" en la agenda | Distraía. Lo cambié por uno que parece escritura. |
-| Leer Teams con la contraseña del alumno | Va contra las condiciones de Educastur y obliga a guardar contraseñas de menores. |
-| Un backend con Spring Boot | Un servidor más que mantener encendido. Supabase da lo mismo sin él. |
-
-Las referencias, con sus imágenes, están en [docs/INSPIRACION.md](docs/INSPIRACION.md).
+Todas las referencias, con sus imágenes, están en [docs/INSPIRACION.md](docs/INSPIRACION.md).
 
 ---
 
@@ -165,25 +164,19 @@ Las referencias, con sus imágenes, están en [docs/INSPIRACION.md](docs/INSPIRA
 - **Solución:** "fotografío" el horario en un canvas leyendo el DOM, lo subo a la GPU y lo deformo con una función de distancia (SDF). Un `MutationObserver` repinta la foto mientras dura cada transición CSS, y los clics atraviesan el cristal hasta el HTML de debajo.
 - **Aprendizaje:** sincronizar dos mundos, el DOM y la GPU, exige saber exactamente cuándo cambia cada uno. Una foto con medio segundo de retraso se nota.
 
-### 4. Teams no se puede leer
-- **Problema:** Teams es donde están más asignaturas (6), pero Educastur tiene desactivado el consentimiento de usuario en Microsoft 365. Ninguna app externa puede pedir permiso.
-- **Solución:** antes de programar, probé la vía oficial (Microsoft Graph) y evalué siete alternativas. Descarté las que iban contra las normas y resolví la primera versión con tareas apuntadas a mano.
-- **Aprendizaje:** una tarde de investigación me ahorró construir algo que nunca habría funcionado. Saber qué está permitido es parte del trabajo técnico.
+### 4. Las plataformas del instituto no están pensadas para esto
+- **Problema:** dos de las tres plataformas no dejan leer las tareas desde fuera.
+  - **Teams**, donde están 6 de mis asignaturas: Educastur tiene desactivado el consentimiento de usuario en Microsoft 365, así que ninguna app externa puede pedir permiso para leerlas.
+  - **Mis Aulas** tiene su API apagada. La única vía es la misma que usa su web: iniciar sesión con el usuario y la contraseña del alumno. Con la sincronización cada 30 minutos, eso supondría un inicio de sesión cada media hora por alumno: una actividad que parece automatizada, que puede chocar con la sesión que el alumno tiene abierta y que pone su cuenta en riesgo de bloqueo.
+- **Solución:** antes de programar, probé la vía oficial de cada plataforma.
+  - **Teams:** evalué siete alternativas, descarté las que iban contra las normas y lo resolví con tareas apuntadas a mano.
+  - **Mis Aulas:** la aislé como un método aparte, pensado para molestar lo menos posible a su web. La contraseña se guarda cifrada, se inicia sesión como mucho una vez cada 2 horas, la sesión se cierra al terminar y, si la contraseña falla, no se vuelve a intentar hasta que el alumno se reconecta, porque muchos intentos fallidos pueden bloquear su cuenta.
+- **Aprendizaje:** que algo funcione no significa que sea sostenible. Investigar primero me ahorró construir lo imposible (Teams), y medir el riesgo de lo que sí funcionaba (Mis Aulas) es una de las razones por las que el proyecto no continúa.
 
 ### 5. Seguridad sin un servidor propio
 - **Problema:** la web habla directamente con la base de datos, y la clave que lo permite es pública: está en el JavaScript.
 - **Solución:** la seguridad vive en Postgres. Las tablas nacen cerradas y tienen dos cerrojos: permisos por rol y RLS (`auth.uid() = user_id`). Lo que necesita privilegios (hablar con Moodle, cifrar credenciales, borrar cuentas) va en Edge Functions. Para borrar la cuenta se pide la contraseña, y se comprueba en el servidor, no en la web.
 - **Aprendizaje:** la prueba que importa es la del atacante. Pedí los datos sin sesión, con la clave pública, y la respuesta fue `permission denied`.
-
-### 6. Un despliegue "correcto" con un archivo viejo
-- **Problema:** Git Bash convertía las rutas a formato Windows, y la CLI de AWS subió una copia antigua sin dar ningún error.
-- **Solución:** lo descubrí comparando lo que había de verdad en el bucket: 17.052 bytes en lugar de 17.060. Desde entonces despliego con un script de Node que no pasa por Git Bash y que sube el `index.html` el último, para que nunca apunte a archivos que aún no existen.
-- **Aprendizaje:** hay que comprobar el resultado, no el mensaje de "Completed".
-
-### 7. El móvil no es un escritorio pequeño
-- **Problema:** en el teléfono aparecieron fallos que en escritorio no existían. Una clase de 2 horas medía lo mismo que una de 1, las cuentas atrás desaparecían y el calendario alargaba la página sin fin.
-- **Solución:** un horario propio para el móvil (cada clase mide lo que dura), las cuentas atrás en una segunda fila, el calendario con scroll propio y el logo controlado con el giroscopio.
-- **Aprendizaje:** hay que probar en un teléfono de verdad. El escritorio no avisó de nada; el móvil, de cuatro cosas.
 
 Los trece retos, con todo el detalle, están en [docs/PROCESO.md](docs/PROCESO.md#3-los-mayores-retos-técnicos).
 
