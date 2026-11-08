@@ -134,7 +134,7 @@ const FUNCIONES: Funcion[] = [
     celda: 'Ajustes · Sincronizar',
     titulo: 'Las entregas llegan solas',
     texto:
-      'Conecta el Moodle del instituto y Mis Aulas y tus entregas se actualizan cada media hora. Las de Teams las apuntas tú: Educastur no deja conectarlo.',
+      'Conecta el Moodle del instituto y tus entregas se actualizan cada media hora; Mis Aulas, cuando pulsas «Sincronizar». Las de Teams las apuntas tú: Educastur no deja conectarlo.',
     muestra: <MiniSincronizar />,
   },
   {

@@ -20,7 +20,8 @@ Cómo y por qué la agenda pasó de ser una web solo de frontend a tener **cuent
 10. [Cómo trabajar con la base de datos](#10-cómo-trabajar-con-la-base-de-datos)
 11. [Lo añadido después](#11-lo-añadido-después-2-nov-2026)
 12. [Sincronización automática, cursos y tareas a mano](#12-sincronización-automática-cursos-y-tareas-a-mano-3-nov-2026)
-13. [Próximos pasos](#13-próximos-pasos)
+13. [Cuenta de prueba, borrado con contraseña y Mis Aulas a mano](#13-cuenta-de-prueba-borrado-con-contraseña-y-mis-aulas-a-mano-8-nov-2026)
+14. [Próximos pasos](#14-próximos-pasos)
 
 ---
 
@@ -288,7 +289,7 @@ pg_cron ('*/30 * * * *')                       ≈ @Scheduled(cron = "0 */30 * *
 
 **Cortesía con las webs del instituto:**
 - Conexiones de 3 en 3, no todas a la vez.
-- **Mis Aulas** (método B) inicia sesión en cada sincronización: como mucho **una vez cada 2 horas**, no cada 30 minutos.
+- **Mis Aulas** (método B) inicia sesión en cada sincronización. Al principio se espaciaba a **una vez cada 2 horas**; después (8 nov) se sacó de la sincronización automática, porque cada inicio de sesión le llega al alumno como aviso de un acceso nuevo. Ahora **solo se sincroniza cuando el alumno pulsa «Sincronizar ahora»**.
 - Si Moodle ya rechazó la contraseña o el token, **no se insiste**: muchos intentos fallidos podrían bloquear la cuenta del alumno. Se espera a que vuelva a conectar, lo que borra el error.
 
 **Comprobar que funciona** (SQL Editor del panel):
@@ -311,7 +312,31 @@ Teams no se puede leer (ver [INTEGRACIONES.md §4](INTEGRACIONES.md#4-teams-qué
 - La sincronización **nunca las toca**: solo borra filas de su `conexion_id`, y las manuales lo tienen a `null`.
 - Salen en la Agenda y el Calendario con la etiqueta **TEAMS**, como las de Moodle con la suya.
 
-## 13. Próximos pasos
+## 13. Cuenta de prueba, borrado con contraseña y Mis Aulas a mano (8 nov 2026)
+
+### 13.1 Borrar la cuenta pide la contraseña
+
+`borrar-cuenta` recibe `{ clave }` y la comprueba **en el servidor** (un `signInWithPassword` con la clave pública) antes de llamar a `deleteUser`. Es **reautenticación**: el token solo demuestra que hay una sesión abierta (puede ser un ordenador del aula que alguien olvidó cerrar); la contraseña demuestra que es el dueño. Si se comprobara solo en la web, cualquiera con el token podría llamar a la función directamente y saltársela.
+
+### 13.2 La cuenta de prueba
+
+El README publica una cuenta para que cualquiera pruebe la web: **`test@admin.is` / `admin123`**. Como su contraseña es pública, el servidor la protege. La web solo lo explica ("No disponible en la cuenta de prueba"):
+
+| Protección | Dónde |
+|---|---|
+| No se puede borrar | `borrar-cuenta` responde 403 (`_shared/demo.ts`) |
+| No puede conectar Moodle ni Mis Aulas: nadie deja ahí sus credenciales para el siguiente visitante | `conectar-moodle` responde 403 |
+| No puede añadir tareas: nadie deja textos o enlaces a quien entre después | Migración `20261108230000_cuenta_prueba.sql`: la política de inserción de `entregas` exige además que el correo del token (`auth.jwt() ->> email`) no sea el de la cuenta de prueba |
+
+La sincronización usa `service_role`, que se salta el RLS, así que no le afecta. Se creó con un registro normal (el proyecto tiene la confirmación de correo desactivada, así que no se envía ningún correo).
+
+**Pruebas** (contra producción, con la clave pública, como un visitante): añadir una tarea → `42501` (RLS); borrarla → 403; conectar Moodle → 403. Y con una cuenta desechable: borrar con la contraseña incorrecta → 403, con la correcta → borrada.
+
+### 13.3 Mis Aulas, solo a mano
+
+`sincronizar-todo` ya no incluye las conexiones del método B. Cada sincronización de Mis Aulas es un inicio de sesión real en su web, y al alumno le llega como aviso de un acceso nuevo; espaciarlo a una vez cada 2 horas no bastaba. Ahora solo se sincroniza cuando el alumno pulsa «Sincronizar ahora».
+
+## 14. Próximos pasos
 
 1. **Comprobar el autologin** al abrir una tarea (consola del navegador: línea `[Agenda]`).
 2. Comprobar si las llamadas de `pg_cron` evitan la **pausa del plan gratuito** tras una semana sin visitas.

@@ -245,7 +245,7 @@ Decisiones tomadas (2 nov 2026): arquitectura del §5 confirmada; modo **delegar
 3. [x] Pasar el login y el registro de la landing a Supabase Auth.
 4. [x] Formulario para añadir tareas de Teams a mano (título, fecha, asignatura y enlace opcional) en Ajustes → Sincronizar; las filas de `entregas` se convierten en `Evento` en el frontend (`useEntregasCuenta`).
 5. [x] Tabla `conexiones_moodle` (token cifrado con AES-GCM en las Edge Functions) + Edge Function `conectar-moodle`, método A.
-6. [x] Edge Function `sincronizar` (botón "Sincronizar ahora") y `pg_cron` cada 30 minutos con `sincronizar-todo` (Mis Aulas, como mucho cada 2 horas).
+6. [x] Edge Function `sincronizar` (botón "Sincronizar ahora") y `pg_cron` cada 30 minutos con `sincronizar-todo` (Mis Aulas, como mucho cada 2 horas; desde el 8 nov, solo a mano: ver BACKEND.md §12).
 7. [x] Ajustes → Sincronizar: conectar, sincronizar y desconectar Moodle. La asignatura de cada curso se adivina por su nombre y se puede corregir en "Cursos y asignaturas".
 8. [x] Método B (aulas2.site): inicio de sesión web en cada sincronización, con la contraseña cifrada (AES-GCM, la misma llave que los tokens). Comprobado sin credenciales que un login fallido también trae `sesskey`: el éxito se detecta por el enlace de `login/logout.php`.
 9. [ ] Más adelante: volver a mirar Teams con Power Automate (§4.4) o con el calendario (§4.3).

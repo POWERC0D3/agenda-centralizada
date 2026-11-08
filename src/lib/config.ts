@@ -12,6 +12,13 @@ export const URL_CALENDARIO_COMPARTIDO = 'https://outlook.office.com/calendar/'
 /** El código de esta web en GitHub: la puerta izquierda del logo lleva a él */
 export const URL_REPO = 'https://github.com/POWERC0D3/agenda-centralizada'
 
+/**
+ * La cuenta de prueba del README. Su contraseña es pública, así que el SERVIDOR no la deja borrarse, conectar
+ * plataformas ni añadir tareas (supabase/functions/_shared/demo.ts y la migración cuenta_prueba).
+ * Aquí solo sirve para que la web lo explique en vez de mostrar un error.
+ */
+export const CORREO_DEMO = 'test@admin.is'
+
 /** La web madre (alvaro.cloud): el tejado del logo lleva a ella */
 export const URL_ORIGEN = 'https://alvaro.cloud'
 

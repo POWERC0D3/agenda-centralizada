@@ -6,6 +6,7 @@
 //   contraseña inician sesión en la web, y se guarda la CONTRASEÑA CIFRADA (cada sincronización vuelve a entrar).
 // Después, en los dos casos, la primera sincronización.
 import { cifrar } from '../_shared/cifrado.ts'
+import { esCuentaDemo } from '../_shared/demo.ts'
 import { admin, cabeceras, quienLlama, responder } from '../_shared/http.ts'
 import {
   abrirSesionWeb,
@@ -35,6 +36,8 @@ Deno.serve(async (req) => {
 
   const userId = await quienLlama(req)
   if (!userId) return responder(req, { error: 'Inicia sesión para conectar Moodle' }, 401)
+  // Cuenta de prueba (contraseña pública): nadie debe dejar ahí sus credenciales para el siguiente visitante
+  if (await esCuentaDemo(userId)) return responder(req, { error: 'En la cuenta de prueba no se pueden conectar plataformas' }, 403)
 
   let cuerpo: { sitio?: string; usuario?: string; clave?: string }
   try {

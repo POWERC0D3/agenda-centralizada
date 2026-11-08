@@ -100,6 +100,8 @@ type Props = {
   /** Las asignaturas del grupo del alumno (para corregir la de cada curso) */
   modulos: string[]
   haySesion: boolean
+  /** La cuenta de prueba: el servidor no le deja conectar plataformas (aquí solo se explica) */
+  demo?: boolean
   avisar: (texto: string) => void
   /** Se ha usado (conectar, sincronizar…): en la configuración guiada, enseña la siguiente sección */
   onUsar: () => void
@@ -121,7 +123,7 @@ const boton = 'border border-linea px-3.5 py-1.5 text-sm transition-colors disab
  * La conexión con el Moodle del centro (aula.iesmontenaranco.com).
  * La contraseña solo viaja a la Edge Function, que pide a Moodle un acceso (token) y la olvida.
  */
-export function ConexionMoodle({ sitio, modulos, haySesion, avisar, onUsar }: Props) {
+export function ConexionMoodle({ sitio, modulos, haySesion, demo = false, avisar, onUsar }: Props) {
   const [verCursos, setVerCursos] = useState(false)
   const info = SITIOS[sitio]
   const [conexion, setConexion] = useState<Conexion | null | undefined>(undefined) // undefined = cargando
@@ -204,6 +206,8 @@ export function ConexionMoodle({ sitio, modulos, haySesion, avisar, onUsar }: Pr
 
         {!haySesion ? (
           <span className="text-xs text-tinta-suave">Inicia sesión para conectarlo</span>
+        ) : demo ? (
+          <span className="text-xs text-tinta-suave">No disponible en la cuenta de prueba</span>
         ) : conexion === undefined ? (
           <span className="text-xs text-tinta-suave">Comprobando…</span>
         ) : conexion ? (
