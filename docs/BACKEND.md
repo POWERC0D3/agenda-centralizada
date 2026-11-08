@@ -113,6 +113,24 @@ Supabase ofrece un servidor MCP para que un asistente de IA consulte el proyecto
 
 ## 5. La base de datos: tabla `entregas`
 
+### Esquema completo (versión final)
+
+Cinco tablas en el esquema `public`. Todas cuelgan de `auth.users` (la tabla de cuentas de Supabase) con `on delete cascade`: al borrar una cuenta, desaparece todo lo suyo. Todas tienen **RLS** activado.
+
+![Esquema de la base de datos en el panel de Supabase: cinco tablas unidas a auth.users](img/supabase-esquema.png)
+
+| Tabla | Qué guarda |
+|---|---|
+| `perfiles` | Grupo, módulos convalidados y sonido: lo que se sincroniza entre dispositivos. |
+| `entregas` | Las entregas y exámenes de cada alumno, de Moodle (sincronizadas) o apuntadas a mano (Teams). |
+| `tareas_hechas` | Las tareas de la Agenda marcadas como hechas, por día. |
+| `conexiones_moodle` | Cada Moodle conectado, con sus credenciales **cifradas** (el navegador no puede ni pedir esas columnas). |
+| `cursos_moodle` | Los cursos de cada Moodle y a qué asignatura del horario corresponden. |
+
+La sincronización la lanza `pg_cron` cada 30 minutos, que llama a la Edge Function `sincronizar-todo`.
+
+### La tabla `entregas`, columna a columna
+
 Archivo: [supabase/migrations/20261102000000_entregas.sql](../supabase/migrations/20261102000000_entregas.sql).
 
 Guarda las entregas y exámenes de cada alumno, **vengan de donde vengan**:
