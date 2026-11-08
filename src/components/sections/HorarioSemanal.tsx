@@ -385,7 +385,7 @@ export function HorarioSemanal({
               // se lee siempre entero (que no hay clase ya lo dice la etiqueta "No lectivo" de su cabecera)
               // La penumbra va en esta caja, por FUERA del bloque: la asignatura elegida y la que está bajo el ratón
               // se libran aquí (si no, por mucho que el bloque se encienda, la caja la seguiría oscureciendo)
-              className={`min-h-0 motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-salida ${c.dia === dia && !cristal ? 'relative z-[5] scale-[1.045]' : ''} ${columnas[c.dia - 1].sinClase && c.dia !== dia && c.asignatura !== foco && c.asignatura !== resaltada ? 'opacity-35' : ''}`}
+              className={`min-h-0 anima:transition-transform anima:duration-300 anima:ease-salida ${c.dia === dia && !cristal ? 'relative z-[5] scale-[1.045]' : ''} ${columnas[c.dia - 1].sinClase && c.dia !== dia && c.asignatura !== foco && c.asignatura !== resaltada ? 'opacity-35' : ''}`}
               style={{ gridColumn: c.dia + 1, gridRow: `${fila(c.inicio)} / ${fila(c.fin)}` }}
             >
               {bloque(c, { largo: fila(c.fin) - fila(c.inicio) > 1 })}

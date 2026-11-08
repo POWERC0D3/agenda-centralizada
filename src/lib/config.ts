@@ -9,6 +9,9 @@ export const URL_CENTRO = 'https://alojaweb.educastur.es/web/iesmontenaranco'
  */
 export const URL_CALENDARIO_COMPARTIDO = 'https://outlook.office.com/calendar/'
 
+/** El código de esta web en GitHub: la puerta izquierda del logo lleva a él */
+export const URL_REPO = 'https://github.com/POWERC0D3/agenda-centralizada'
+
 /** La web madre (alvaro.cloud): el tejado del logo lleva a ella */
 export const URL_ORIGEN = 'https://alvaro.cloud'
 

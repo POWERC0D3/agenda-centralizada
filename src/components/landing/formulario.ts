@@ -3,7 +3,7 @@ import { ScrollTrigger } from '../../lib/gsap'
 /**
  * Baja hasta la tarjeta de cuenta (la barra de arriba, el botón del final y la llegada desde dentro de la web).
  * - Con la escena animada: al final de su scroll. Al bajar suave, la historia pasa a cámara rápida.
- * - Sin escena (movimiento reducido): la tarjeta está en el flujo normal, debajo de la lista; se salta sin animación.
+ * - Sin escena (animaciones simplificadas): la tarjeta está en el flujo normal, debajo de la lista; se salta sin animación.
  * `inmediato`: sin desplazamiento suave y con la animación ya terminada (para llegar con todo en su sitio).
  */
 export function irAlFormulario(inmediato = false) {

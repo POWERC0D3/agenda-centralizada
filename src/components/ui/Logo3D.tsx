@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
-import { useReducedMotion } from 'motion/react'
+import { useAnimacionesSimples } from '../../hooks/useAnimacionesSimples'
 import logoUrl from '../../assets/logo-ies.jpg'
 import { canica, marimba, timbre } from '../../lib/sonido'
 
@@ -623,7 +623,7 @@ export function Logo3D({ className = '', zonas, onZona }: Props) {
   const etiqueta = useRef<HTMLSpanElement>(null)
   const redibujar = useRef(() => {})
   const [activa, setActiva] = useState(-1)
-  const reducido = useReducedMotion()
+  const reducido = useAnimacionesSimples()
 
   useEffect(() => {
     const c = cv.current

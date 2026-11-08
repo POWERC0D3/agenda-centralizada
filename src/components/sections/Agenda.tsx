@@ -8,6 +8,7 @@ import type { Excluidas } from '../../lib/horario'
 import { EASE_SALIDA } from '../../lib/movimiento'
 import { sonar } from '../../lib/sonido'
 import { abrirTarea } from '../../lib/abrir'
+import { animacionesSimples } from '../../lib/animaciones'
 import { deLasClasesDelDia, tareasDelDia, type Prioridad, type Tarea } from '../../lib/tareas'
 import { Panel } from '../ui/Panel'
 import { Escritura } from '../ui/Escritura'
@@ -23,8 +24,8 @@ const BRILLO: Record<Prioridad, string> = {
 
 // Cuánto tienes que quedarte en un día para que la IA "termine de pensar" y se escriba el plan
 const PENSAR_MS = 1200
-// Con movimiento reducido no hay pantalla de "pensando": el plan sale directamente
-const sinAnimacion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+// Con las animaciones simplificadas no hay pantalla de "pensando": el plan sale directamente
+const sinAnimacion = animacionesSimples
 
 /**
  * Profundidad en dibujo técnico isométrico: la Agenda es la cara frontal de un taco de post-its.

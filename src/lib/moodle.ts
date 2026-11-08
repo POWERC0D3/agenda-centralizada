@@ -1,5 +1,4 @@
-import { FunctionsHttpError } from '@supabase/supabase-js'
-import { supabase } from './supabase'
+import { mensajeDe, supabase } from './supabase'
 
 // Moodle y las entregas de la cuenta, desde la web. Se importa con import() dinámico: supabase-js no
 // entra en el JavaScript inicial del panel. El trabajo de verdad lo hacen las Edge Functions
@@ -30,19 +29,6 @@ export type EntregaCuenta = {
 
 /** Avisa al panel de que han cambiado las entregas (conectar, sincronizar, desconectar…). */
 const avisarCambioEntregas = () => window.dispatchEvent(new Event('agenda:entregas'))
-
-/** El mensaje de error que devuelve una Edge Function ({ error: "…" }), o uno genérico. */
-async function mensajeDe(error: unknown): Promise<string> {
-  if (error instanceof FunctionsHttpError) {
-    try {
-      const cuerpo = (await error.context.json()) as { error?: string }
-      if (cuerpo.error) return cuerpo.error
-    } catch {
-      // sin cuerpo JSON
-    }
-  }
-  return 'No se pudo completar. Comprueba tu conexión e inténtalo de nuevo'
-}
 
 export async function misConexiones(): Promise<ConexionMoodle[]> {
   // Solo las columnas permitidas: el token cifrado ni siquiera se puede pedir

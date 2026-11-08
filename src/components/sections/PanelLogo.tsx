@@ -1,5 +1,5 @@
 import type { Navegar, Ruta } from '../../hooks/useRuta'
-import { URL_CENTRO, URL_ORIGEN } from '../../lib/config'
+import { URL_ORIGEN, URL_REPO } from '../../lib/config'
 import { Logo3D, type ZonaLogo } from '../ui/Logo3D'
 import { Panel } from '../ui/Panel'
 
@@ -9,7 +9,7 @@ const ZONAS: ZonaLogo[] = [
   { id: 'origen', etiqueta: 'Origen ↗', poligono: [[99, 23], [128, 49], [70, 49]] }, // tejado: la web madre, alvaro.cloud
   { id: 'entrar', etiqueta: 'Cuenta', poligono: [[74, 49], [126, 49], [126, 107], [74, 107]] }, // puerta central
   { id: 'ajustes', etiqueta: 'Ajustes', poligono: [[129, 49], [171, 49], [171, 114], [129, 114]] }, // puerta derecha
-  { id: 'web', etiqueta: 'Web del instituto ↗', poligono: [[29, 49], [71, 49], [71, 114], [29, 114]] }, // puerta izquierda
+  { id: 'repo', etiqueta: 'Repositorio en GitHub ↗', poligono: [[29, 49], [71, 49], [71, 114], [29, 114]] }, // puerta izquierda
 ]
 
 type Props = {
@@ -21,7 +21,7 @@ type Props = {
 export function PanelLogo({ onNavegar, className = '' }: Props) {
   const alPulsar = (id: string, centro: { x: number; y: number }) => {
     // Las dos webs de fuera se abren en otra pestaña (por eso llevan ↗); el resto son páginas de esta web
-    if (id === 'web') window.open(URL_CENTRO, '_blank', 'noopener,noreferrer')
+    if (id === 'repo') window.open(URL_REPO, '_blank', 'noopener,noreferrer')
     else if (id === 'origen') window.open(URL_ORIGEN, '_blank', 'noopener,noreferrer')
     else onNavegar(id as Ruta, centro)
   }
@@ -29,7 +29,7 @@ export function PanelLogo({ onNavegar, className = '' }: Props) {
   return (
     <Panel
       tutorial="logo"
-      etiqueta="Accesos: alvaro.cloud, tu cuenta, ajustes y web del instituto"
+      etiqueta="Accesos: alvaro.cloud, tu cuenta, ajustes y repositorio en GitHub"
       className={`h-64 bg-transparent! sm:h-80 lg:h-auto ${className}`}
       fondo={<Logo3D zonas={ZONAS} onZona={alPulsar} className="size-full" />}
     />

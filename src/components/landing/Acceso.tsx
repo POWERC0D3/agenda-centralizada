@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { motion } from 'motion/react'
 import { irA, type Navegar } from '../../hooks/useRuta'
-import { cerrarSesion, repetirBienvenida, useSesion } from '../../hooks/useSesion'
+import { borrarCuenta, cerrarSesion, repetirBienvenida, useSesion } from '../../hooks/useSesion'
 import { empezarBienvenida } from '../../lib/bienvenida'
 import { centroDe } from '../../lib/dom'
 import { EASE_SALIDA } from '../../lib/movimiento'
@@ -58,6 +58,28 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
   const [enviando, setEnviando] = useState(false)
   // El error recuerda en qué pestaña ocurrió: al cambiar de pestaña deja de mostrarse solo
   const [error, setError] = useState<{ modo: ModoCuenta; texto: string } | null>(null)
+  // Eliminar cuenta: cerrado → pidiendo la contraseña → borrando (en la función del servidor)
+  const [eliminar, setEliminar] = useState<null | 'pidiendo' | 'borrando'>(null)
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null)
+  const [cuentaBorrada, setCuentaBorrada] = useState(false)
+
+  const confirmarEliminar = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const clave = String(new FormData(e.currentTarget).get('clave'))
+    sonar('button')
+    setErrorEliminar(null)
+    setEliminar('borrando')
+    try {
+      await borrarCuenta(clave) // al terminar se cierra la sesión: useSesion avisa y la tarjeta vuelve al formulario
+      sonar('toggle_off')
+      setEliminar(null)
+      setCuentaBorrada(true)
+    } catch (err) {
+      sonar('caution', { volumen: 0.5 })
+      setErrorEliminar((err as Error).message)
+      setEliminar('pidiendo')
+    }
+  }
 
   // Solo llega aquí si todos los campos son válidos: si no, el navegador corta el envío antes
   const enviar = async (e: FormEvent<HTMLFormElement>) => {
@@ -136,6 +158,57 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
           >
             Cerrar sesión
           </button>
+
+          {/* Derecho de supresión (RGPD). Pide la contraseña: una sesión abierta no basta para borrarlo todo */}
+          <div className="border-t border-linea pt-4">
+            {eliminar === null ? (
+              <button
+                type="button"
+                onClick={() => {
+                  sonar('caution', { volumen: 0.5 })
+                  setErrorEliminar(null)
+                  setEliminar('pidiendo')
+                }}
+                className="text-xs text-tinta-suave underline-offset-4 transition-colors hover:text-coral hover:underline"
+              >
+                Eliminar cuenta
+              </button>
+            ) : (
+              <form
+                onSubmit={confirmarEliminar}
+                onInvalidCapture={() => sonar('caution', { volumen: 0.5, cada: 400 })}
+                aria-busy={eliminar === 'borrando'}
+                className="space-y-3 text-left"
+              >
+                <p className="text-xs leading-relaxed text-coral">
+                  Se borrarán tu cuenta y todos tus datos, para siempre. Escribe tu contraseña para confirmarlo.
+                </p>
+                <Campo etiqueta="Contraseña" nombre="clave" tipo="password" autocompletar="current-password" />
+                {errorEliminar && (
+                  <p role="alert" className="text-xs text-coral">
+                    {errorEliminar}
+                  </p>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    disabled={eliminar === 'borrando'}
+                    onClick={() => setEliminar(null)}
+                    className="text-xs text-tinta-suave transition-colors hover:text-tinta disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={eliminar === 'borrando'}
+                    className="border border-coral px-3.5 py-1.5 text-xs text-coral transition-colors hover:bg-coral hover:text-white disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {eliminar === 'borrando' ? 'Eliminando…' : 'Eliminar definitivamente'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       ) : (
         <>
@@ -171,8 +244,13 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
             aria-busy={enviando}
             className="mt-5 space-y-3"
           >
-            {crear && <Campo etiqueta="Nombre" nombre="nombre" tipo="text" autocompletar="name" />}
-            <Campo etiqueta="Correo del centro" nombre="correo" tipo="email" autocompletar="email" />
+            {cuentaBorrada && (
+              <p role="status" className="text-xs text-verde">
+                Tu cuenta y todos tus datos se han borrado.
+              </p>
+            )}
+            {crear &&<Campo etiqueta="Nombre" nombre="nombre" tipo="text" autocompletar="name" />}
+            <Campo etiqueta="Correo" nombre="correo" tipo="email" autocompletar="email" />
             <Campo
               etiqueta={crear ? 'Contraseña (mínimo 6 caracteres)' : 'Contraseña'}
               nombre="clave"

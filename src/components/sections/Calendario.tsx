@@ -1,5 +1,6 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useAnimacionesSimples } from '../../hooks/useAnimacionesSimples'
 import type { EventoConDias, TipoEvento } from '../../types'
 import { URL_CALENDARIO_COMPARTIDO } from '../../lib/config'
 import { colorAsignatura, nombreAsignatura } from '../../lib/datos'
@@ -191,7 +192,7 @@ type Props = {
 }
 
 export function Calendario({ ahora, lista, asignaturaEnFoco, sinDatos, className = '' }: Props) {
-  const reducido = useReducedMotion()
+  const reducido = useAnimacionesSimples()
   const [pestana, setPestana] = useState<Pestana>('examenes')
   // Día "compartido" entre la cuadrícula y la lista: al pasar el ratón por uno se ilumina el otro
   const [diaResaltado, setDiaResaltado] = useState<string | null>(null)

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
-import { MotionConfig, motion, useReducedMotion } from 'motion/react'
+import { MotionConfig, motion } from 'motion/react'
+import { useAnimacionesSimples } from './hooks/useAnimacionesSimples'
 import { useAhora } from './hooks/useAhora'
 import { useAviso } from './hooks/useAviso'
 import { useEntregasCuenta } from './hooks/useEntregasCuenta'
@@ -92,7 +93,7 @@ function App() {
     }
     setFoco(focoValido === id ? null : id)
   }
-  const reducido = useReducedMotion()
+  const reducido = useAnimacionesSimples()
 
   // En cuanto el navegador está libre se descargan las otras páginas: al navegar ya están listas
   // y la cortina no destapa una pantalla vacía. import() guarda el módulo, así que no se baja dos veces
@@ -155,7 +156,7 @@ function App() {
     setElegida(f ? destino : null)
   }
 
-  // Cambio de página con la cortina de píxeles (sin animación si se pide movimiento reducido)
+  // Cambio de página con la cortina de píxeles (sin ella con las animaciones simplificadas)
   // `mensaje` (opcional) se muestra al LLEGAR a la página nueva, no al salir: si no, la cortina lo taparía
   const navegar: Navegar = (destino, origen, mensaje) => {
     // A la landing desde dentro de la web: directo a la tarjeta de cuenta, sin repetir la historia
@@ -178,8 +179,9 @@ function App() {
   }
 
   return (
-    // reducedMotion="user": Motion respeta prefers-reduced-motion en todas las animaciones
-    <MotionConfig reducedMotion="user">
+    // Motion obedece a la preferencia de la web, no a la del sistema: "always" quita movimientos y escalas
+    // (los fundidos de opacidad se quedan); "never", todas las animaciones aunque el sistema pida reducir
+    <MotionConfig reducedMotion={reducido ? 'always' : 'never'}>
       <FondoPuntos />
 
       {/* Mientras llega una página diferida (solo al entrar directamente en ella) se ve el fondo de puntos */}

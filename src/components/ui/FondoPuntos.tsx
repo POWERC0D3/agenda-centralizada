@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useAnimacionesSimples } from '../../hooks/useAnimacionesSimples'
 
 /* Fondo de toda la página, al estilo de la referencia: puntos cuadrados blancos
    agrupados en manchas con degradado de puntos.
@@ -63,13 +64,14 @@ const crearOndas = (n: number): Ondas => ({
 
 export function FondoPuntos() {
   const ref = useRef<HTMLCanvasElement>(null)
+  // Con las animaciones simplificadas, la trama se pinta una vez y se queda quieta (y no gasta procesador)
+  const reducido = useAnimacionesSimples()
 
   useEffect(() => {
     const cv = ref.current
     const g = cv?.getContext('2d')
     if (!cv || !g) return
 
-    const reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     // Color y opacidad de los puntos: del CSS (index.css), que los cambia con el tema
     let color = '#ededed'
     let opacidad = 0.32
@@ -152,7 +154,7 @@ export function FondoPuntos() {
       observador.disconnect()
       window.removeEventListener('resize', redimensionar)
     }
-  }, [])
+  }, [reducido]) // si cambia en Ajustes, el efecto se limpia y vuelve a empezar en el otro modo
 
   return <canvas ref={ref} className="pointer-events-none fixed inset-0 -z-10 size-full" aria-hidden="true" />
 }

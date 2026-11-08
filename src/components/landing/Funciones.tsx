@@ -153,7 +153,7 @@ const FUNCIONES: Funcion[] = [
 ]
 
 const EMPEZAR = [
-  { titulo: 'Crea tu cuenta', texto: 'Con tu correo del centro y una contraseña.' },
+  { titulo: 'Crea tu cuenta', texto: 'Con tu correo y una contraseña.' },
   { titulo: 'Elige tu grupo', texto: 'Ciclo, curso y grupo. Y apaga los módulos que tengas convalidados.' },
   { titulo: 'Conecta tus plataformas', texto: 'El Moodle del instituto y Mis Aulas, si quieres. Un tutorial corto te enseña el resto.' },
 ]
