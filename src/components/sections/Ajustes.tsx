@@ -8,6 +8,7 @@ import { colorAsignatura, nombreAsignatura } from '../../lib/datos'
 import { datosDelGrupo, nombreGrupo, SOLO_CONFIGURADOS, type Grupo } from '../../lib/grupos'
 import type { Excluidas } from '../../lib/horario'
 import { guardarPasoBienvenida, pasoBienvenida, pedirTutorial, terminarBienvenida } from '../../lib/bienvenida'
+import { CORREO_DEMO } from '../../lib/config'
 import { centroDe } from '../../lib/dom'
 import { simplificarAnimaciones } from '../../lib/animaciones'
 import { aparecer, cascada } from '../../lib/movimiento'
@@ -101,6 +102,7 @@ function columnasEquilibradas(n: number, max: number) {
 export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRestablecer, onNavegar, avisar }: Props) {
   const sonido = useSonido()
   const { usuario, bienvenidaPendiente } = useSesion()
+  const demo = usuario?.email === CORREO_DEMO // la cuenta de prueba: no puede conectar plataformas ni añadir tareas
   const [marcandoBienvenida, setMarcandoBienvenida] = useState(false)
   const reducido = useAnimacionesSimples()
 
@@ -296,9 +298,9 @@ export function Ajustes({ modulos, grupo, onGrupo, excluidas, onAlternar, onRest
             descripcion="Trae tus entregas de las plataformas del instituto a la agenda, sin copiarlas a mano."
           >
             <div className="space-y-2">
-              <ConexionMoodle sitio="centro" modulos={modulos} haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
-              <ConexionMoodle sitio="misaulas" modulos={modulos} haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
-              <TareasManuales modulos={modulos} haySesion={!!usuario} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
+              <ConexionMoodle sitio="centro" modulos={modulos} haySesion={!!usuario} demo={demo} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
+              <ConexionMoodle sitio="misaulas" modulos={modulos} haySesion={!!usuario} demo={demo} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
+              <TareasManuales modulos={modulos} haySesion={!!usuario} demo={demo} avisar={avisar} onUsar={() => avanzar('sincronizar')} />
             </div>
           </Grupo>
         )}

@@ -6,6 +6,8 @@ import { sonar } from '../../lib/sonido'
 
 type Props = {
   haySesion: boolean
+  /** La cuenta de prueba: la base de datos no le deja añadir tareas (aquí solo se explica) */
+  demo?: boolean
   /** Las asignaturas del grupo del alumno */
   modulos: string[]
   avisar: (texto: string) => void
@@ -20,7 +22,7 @@ const campo = 'w-full border border-linea bg-fondo px-3 py-2 text-sm outline-non
  * Se guardan en la tabla `entregas` con origen 'manual' y plataforma 'Teams': salen en la Agenda y el
  * Calendario con su etiqueta, igual que las de Moodle.
  */
-export function TareasManuales({ haySesion, modulos, avisar, onUsar }: Props) {
+export function TareasManuales({ haySesion, demo = false, modulos, avisar, onUsar }: Props) {
   const [tareas, setTareas] = useState<TareaManual[] | null>(null)
   const [formulario, setFormulario] = useState(false)
   const [guardando, setGuardando] = useState(false)
@@ -89,7 +91,9 @@ export function TareasManuales({ haySesion, modulos, avisar, onUsar }: Props) {
           <span className="block font-medium">Teams</span>
           <span className="block text-xs text-tinta-suave">Educastur no deja conectar apps: añade sus tareas a mano</span>
         </span>
-        {haySesion ? (
+        {haySesion && demo ? (
+          <span className="text-xs text-tinta-suave">No disponible en la cuenta de prueba</span>
+        ) : haySesion ? (
           !formulario && (
             <button
               type="button"

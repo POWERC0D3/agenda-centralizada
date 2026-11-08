@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { irA, type Navegar } from '../../hooks/useRuta'
 import { borrarCuenta, cerrarSesion, repetirBienvenida, useSesion } from '../../hooks/useSesion'
 import { empezarBienvenida } from '../../lib/bienvenida'
+import { CORREO_DEMO } from '../../lib/config'
 import { centroDe } from '../../lib/dom'
 import { EASE_SALIDA } from '../../lib/movimiento'
 import { sonar } from '../../lib/sonido'
@@ -161,7 +162,10 @@ export function TarjetaCuenta({ modo, onAcceder, className = '' }: Props) {
 
           {/* Derecho de supresión (RGPD). Pide la contraseña: una sesión abierta no basta para borrarlo todo */}
           <div className="border-t border-linea pt-4">
-            {eliminar === null ? (
+            {usuario.email === CORREO_DEMO ? (
+              // El servidor tampoco la deja borrarse: su contraseña es pública (README)
+              <p className="text-xs text-tinta-suave">La cuenta de prueba no se puede borrar</p>
+            ) : eliminar === null ? (
               <button
                 type="button"
                 onClick={() => {

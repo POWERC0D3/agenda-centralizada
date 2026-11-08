@@ -125,7 +125,7 @@ export function Privacidad() {
         />
         <p>
           Si conectas Moodle o Mis Aulas, el servidor habla con aula.iesmontenaranco.com o aulas2.site en tu nombre para leer tus entregas:
-          solo, cada 30 minutos (en Mis Aulas, como mucho cada 2 horas), y cuando pulsas «Sincronizar ahora». Al abrir una tarea, tu
+          el Moodle del centro, cada 30 minutos y cuando pulsas «Sincronizar ahora»; Mis Aulas, solo cuando pulsas «Sincronizar ahora». Al abrir una tarea, tu
           navegador usa tu clave para entrar en Moodle con tu sesión iniciada.
         </p>
       </Seccion>

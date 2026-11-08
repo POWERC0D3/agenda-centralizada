@@ -5,14 +5,15 @@
 //
 // Cortesía con las webs del instituto:
 // - De 3 en 3, no todas a la vez.
-// - Mis Aulas (método B) inicia sesión cada vez: se sincroniza como mucho cada 2 horas, no cada 30 minutos.
+// - Mis Aulas (método B) NO se sincroniza sola: con la API apagada, cada sincronización es un inicio de sesión
+//   real en su web, y al alumno le llega como aviso de un acceso nuevo. Solo se sincroniza cuando él pulsa
+//   «Sincronizar ahora» (Edge Function sincronizar). Antes se espaciaba a una vez cada 2 horas; no bastaba.
 // - Si Moodle ya rechazó la contraseña o el token, no se insiste (muchos intentos fallidos pueden bloquear la
 //   cuenta del alumno): se espera a que vuelva a conectar, lo que borra el error.
 import { admin, responder } from '../_shared/http.ts'
 import { COLUMNAS_CONEXION, sincronizarConexion, type Conexion } from '../_shared/sincronizar.ts'
 
 const A_LA_VEZ = 3
-const MIN_ENTRE_SESIONES_MS = 2 * 60 * 60 * 1000
 const ERRORES_DE_CREDENCIALES = ['Moodle no acepta tu contraseña', 'Moodle ya no acepta la conexión']
 
 /** Comparación en tiempo constante: no deja adivinar el secreto midiendo cuánto tarda en fallar. */
@@ -31,13 +32,12 @@ Deno.serve(async (req) => {
   if (typeof secreto !== 'string' || !iguales(req.headers.get('x-cron-secreto') ?? '', secreto))
     return responder(req, { error: 'No autorizado' }, 401)
 
-  const { data, error } = await db.from('conexiones_moodle').select(`${COLUMNAS_CONEXION}, ultimo_sync, ultimo_error`)
+  const { data, error } = await db.from('conexiones_moodle').select(`${COLUMNAS_CONEXION}, ultimo_error`)
   if (error) return responder(req, { error: 'No se pudieron leer las conexiones' }, 500)
 
-  const ahora = Date.now()
-  const conexiones = (data as (Conexion & { ultimo_sync: string | null; ultimo_error: string | null })[]).filter((c) => {
+  const conexiones = (data as (Conexion & { ultimo_error: string | null })[]).filter((c) => {
+    if (c.metodo === 'sesion') return false // Mis Aulas: solo a mano (ver arriba)
     if (c.ultimo_error && ERRORES_DE_CREDENCIALES.some((m) => c.ultimo_error!.startsWith(m))) return false
-    if (c.metodo === 'sesion' && c.ultimo_sync && ahora - new Date(c.ultimo_sync).getTime() < MIN_ENTRE_SESIONES_MS) return false
     return true
   })
 

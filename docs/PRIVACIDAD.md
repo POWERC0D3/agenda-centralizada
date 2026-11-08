@@ -44,7 +44,7 @@ Ningún dato se vende ni se cede a nadie. Solo los tratan los servicios técnico
 | **Amazon Web Services** (S3 y CloudFront) | Sirve la web. No guarda tus datos personales | UE y red de distribución mundial |
 | **Cloudflare** | Dirige el dominio hacia la web (DNS). No guarda tus datos | — |
 
-Cuando conectas Moodle o Mis Aulas, el servidor habla con **aula.iesmontenaranco.com** o **aulas2.site** en tu nombre para leer tus entregas: solo, **cada 30 minutos** (en Mis Aulas, como mucho cada 2 horas), y cuando pulsas «Sincronizar ahora». Al abrir una tarea, tu navegador usa tu clave para entrar en Moodle con tu sesión iniciada.
+Cuando conectas Moodle o Mis Aulas, el servidor habla con **aula.iesmontenaranco.com** o **aulas2.site** en tu nombre para leer tus entregas: el Moodle del centro, **cada 30 minutos** y cuando pulsas «Sincronizar ahora»; Mis Aulas, **solo cuando pulsas «Sincronizar ahora»**. Al abrir una tarea, tu navegador usa tu clave para entrar en Moodle con tu sesión iniciada.
 
 ## 5. Cuánto tiempo los guardamos
 
