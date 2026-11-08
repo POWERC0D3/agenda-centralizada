@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
+import { mensajeDe, supabase } from '../lib/supabase'
 
 /**
  * Quién ha iniciado sesión (o null) y si aún se está comprobando.
@@ -50,10 +50,13 @@ export async function repetirBienvenida(si: boolean): Promise<void> {
   if (error) throw new Error('No se pudo guardar. Inténtalo de nuevo')
 }
 
-/** Borra la cuenta y todos sus datos (Edge Function borrar-cuenta) y cierra la sesión. */
-export async function borrarCuenta(): Promise<void> {
-  const { error } = await supabase.functions.invoke('borrar-cuenta', { body: {} })
-  if (error) throw new Error('No se pudo borrar la cuenta. Inténtalo más tarde')
+/**
+ * Borra la cuenta y todos sus datos (Edge Function borrar-cuenta) y cierra la sesión.
+ * La contraseña la comprueba la función, en el servidor: si no es correcta, lanza su mensaje ("La contraseña no es correcta").
+ */
+export async function borrarCuenta(clave: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('borrar-cuenta', { body: { clave } })
+  if (error) throw new Error(await mensajeDe(error))
   // scope local: el usuario ya no existe en el servidor; basta con olvidar la sesión en este navegador
   await supabase.auth.signOut({ scope: 'local' })
 }

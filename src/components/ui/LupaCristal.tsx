@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useRef } from 'react'
+import { useAnimacionesSimples } from '../../hooks/useAnimacionesSimples'
 import { crearCristal, MARGEN, type Cristal } from '../../lib/cristal'
 
 type Props = {
@@ -13,6 +14,7 @@ export function LupaCristal({ rejilla, dia, semana, onActiva }: Props) {
   const lienzo = useRef<HTMLCanvasElement>(null)
   const cristal = useRef<Cristal | null>(null)
   const anterior = useRef({ dia, semana })
+  const quieto = useAnimacionesSimples() // la lupa salta de día en vez de deslizarse
 
   // useEffectEvent: lee el día y la semana ACTUALES al montar sin que el efecto dependa de ellos
   const montado = useEffectEvent((c: Cristal | null) => {
@@ -23,7 +25,6 @@ export function LupaCristal({ rejilla, dia, semana, onActiva }: Props) {
   useEffect(() => {
     if (!rejilla || !lienzo.current) return
     const fondo = getComputedStyle(rejilla.closest('section') ?? rejilla).backgroundColor
-    const quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const c = crearCristal(lienzo.current, rejilla, fondo, quieto)
     cristal.current = c
     montado(c)
@@ -31,7 +32,7 @@ export function LupaCristal({ rejilla, dia, semana, onActiva }: Props) {
       c?.destruir()
       cristal.current = null
     }
-  }, [rejilla])
+  }, [rejilla, quieto])
 
   useEffect(() => {
     const prev = anterior.current

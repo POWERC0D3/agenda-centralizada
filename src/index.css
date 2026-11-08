@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Variantes propias en lugar de motion-safe: / motion-reduce: de Tailwind. Esas leen el ajuste del SISTEMA;
+   la web decide con su propia preferencia (lib/animaciones.ts, que pone data-animaciones en <html>).
+   anima:  solo con todas las animaciones · quieto: solo con las animaciones simplificadas */
+@custom-variant anima (&:where(html:not([data-animaciones="simples"]) *));
+@custom-variant quieto (&:where(html[data-animaciones="simples"] *));
+
 /* ── Tokens de diseño ─────────────────────────────────────────
    Todo lo que va dentro de @theme se convierte en clases de Tailwind:
    --color-arena → text-arena, bg-arena, border-arena…

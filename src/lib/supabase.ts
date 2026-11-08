@@ -1,4 +1,4 @@
-import { createClient, isAuthApiError } from '@supabase/supabase-js'
+import { createClient, FunctionsHttpError, isAuthApiError } from '@supabase/supabase-js'
 import { SUPABASE_CLAVE_PUBLICA, SUPABASE_URL } from './config'
 
 /**
@@ -28,4 +28,17 @@ export function mensajeDeError(error: unknown): string {
   if (isAuthApiError(error) && error.code && MENSAJES[error.code]) return MENSAJES[error.code]
   if (error instanceof TypeError) return 'No hay conexión: comprueba tu internet' // fetch falla con TypeError
   return 'Algo ha fallado. Inténtalo de nuevo'
+}
+
+/** El mensaje de error que devuelve una Edge Function ({ error: "…" }), o uno genérico. */
+export async function mensajeDe(error: unknown): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const cuerpo = (await error.context.json()) as { error?: string }
+      if (cuerpo.error) return cuerpo.error
+    } catch {
+      // sin cuerpo JSON
+    }
+  }
+  return 'No se pudo completar. Comprueba tu conexión e inténtalo de nuevo'
 }

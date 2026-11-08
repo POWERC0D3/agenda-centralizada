@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useReducedMotion } from 'motion/react'
+import { useAnimacionesSimples } from '../../hooks/useAnimacionesSimples'
 
 type Props = {
   texto: string
@@ -24,7 +24,7 @@ type Props = {
 export function Escritura({ texto, retraso = 0, ritmo = 18, className = '' }: Props) {
   const escrito = useRef<HTMLSpanElement>(null)
   const falta = useRef<HTMLSpanElement>(null)
-  const reducido = useReducedMotion()
+  const reducido = useAnimacionesSimples()
 
   useEffect(() => {
     const a = escrito.current

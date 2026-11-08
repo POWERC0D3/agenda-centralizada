@@ -1,4 +1,5 @@
 import { useRef, type CSSProperties } from 'react'
+import { useAnimacionesSimples } from '../../hooks/useAnimacionesSimples'
 import type { Navegar } from '../../hooks/useRuta'
 import { tomarFormulario } from '../../lib/acceso'
 import { gsap, ScrollTrigger, useGSAP } from '../../lib/gsap'
@@ -16,8 +17,8 @@ import { irAlFormulario } from './formulario'
    - `pin`: la sección no se mueve mientras dura la animación; lo que avanza es la animación.
    - `scrub`: el progreso va pegado a la barra de scroll (si subes, se deshace).
    - Fichas y palabras están en su sitio FINAL en el HTML; la animación es un `from`:
-     empiezan desplazadas y giradas (el caos) y vuelven a su sitio. Sin animación
-     (movimiento reducido), el HTML ya es el estado final: lista y formulario, uno debajo del otro. */
+     empiezan desplazadas y giradas (el caos) y vuelven a su sitio. Con las animaciones simplificadas
+     (Ajustes), el HTML ya es el estado final: lista y formulario, uno debajo del otro. */
 
 type Ficha = {
   plataforma: string
@@ -50,14 +51,16 @@ type Props = { modo: ModoCuenta; onAcceder: Navegar }
 
 export function Hero({ modo, onAcceder }: Props) {
   const raiz = useRef<HTMLElement>(null)
+  const simples = useAnimacionesSimples()
 
   useGSAP(
     () => {
       let callado = false // al saltar directo al formulario, sin el sonido de "formulario en su sitio"
+      const limpiar: (() => void)[] = [] // lo que GSAP no deshace solo (clases, observadores…)
 
-      // matchMedia de GSAP: la escena solo existe si NO se pide movimiento reducido
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // La escena solo existe con todas las animaciones (lib/animaciones.ts). Si la preferencia cambia,
+      // useGSAP deshace todo (revertOnUpdate) y vuelve a ejecutar esta función
+      if (!simples) {
         const seccion = raiz.current!
         // En modo escena la tarjeta de cuenta se superpone a la lista (CSS: group-[.escena]/hero:…)
         seccion.classList.add('escena')
@@ -134,11 +137,11 @@ export function Hero({ modo, onAcceder }: Props) {
         })
         observador.observe(cuenta)
 
-        return () => {
+        limpiar.push(() => {
           observador.disconnect()
           seccion.classList.remove('escena', 'ordenadas')
-        }
-      })
+        })
+      }
 
       // ¿Venimos de dentro de la web (cerrar sesión, la puerta "Cuenta"…)? Entonces, directo al formulario.
       // En el fotograma siguiente: App sube el scroll arriba al cambiar de página (en un efecto que va DESPUÉS
@@ -150,9 +153,13 @@ export function Hero({ modo, onAcceder }: Props) {
         irAlFormulario(true)
         callado = false
       })
-      return () => cancelAnimationFrame(id)
+      return () => {
+        cancelAnimationFrame(id)
+        limpiar.forEach((f) => f())
+      }
     },
-    { scope: raiz }, // los selectores ('.ficha'…) solo buscan dentro de esta sección
+    // scope: los selectores ('.ficha'…) solo buscan dentro de esta sección
+    { scope: raiz, dependencies: [simples], revertOnUpdate: true },
   )
 
   return (
@@ -205,7 +212,7 @@ export function Hero({ modo, onAcceder }: Props) {
                     <li key={f.texto} className="ficha relative z-10">
                       {/* El flotar va en un elemento interior: el exterior lo mueve GSAP */}
                       <div
-                        className="flex items-center gap-3 border border-linea bg-fondo-alto px-3 py-2 shadow-lg shadow-tinta/10 motion-safe:animate-flotar group-[.ordenadas]/hero:animate-none"
+                        className="flex items-center gap-3 border border-linea bg-fondo-alto px-3 py-2 shadow-lg shadow-tinta/10 anima:animate-flotar group-[.ordenadas]/hero:animate-none"
                         style={{ animationDelay: `${(f.x + f.y) * -2}s`, '--c': f.color } as CSSProperties}
                       >
                         <span className="size-3.5 shrink-0 border border-tinta/30" aria-hidden="true" />
@@ -223,7 +230,7 @@ export function Hero({ modo, onAcceder }: Props) {
             </p>
           </div>
 
-          {/* Sin escena (movimiento reducido): debajo de la lista. En escena: encima, en su mismo sitio */}
+          {/* Sin escena (animaciones simplificadas): debajo de la lista. En escena: encima, en su mismo sitio */}
           <TarjetaCuenta
             modo={modo}
             onAcceder={onAcceder}
@@ -234,8 +241,8 @@ export function Hero({ modo, onAcceder }: Props) {
 
       {/* Indicador de scroll. GSAP lo apaga en el envoltorio; el pulso (CSS, también sobre opacity) va dentro:
           una animación CSS gana a un estilo en línea, así que cada uno necesita su propio elemento */}
-      <span className="desliza absolute bottom-4 left-1/2 -translate-x-1/2 motion-reduce:hidden">
-        <span className="block font-mono text-[0.65rem] tracking-widest text-tinta-suave uppercase motion-safe:animate-pulse">
+      <span className="desliza absolute bottom-4 left-1/2 -translate-x-1/2 quieto:hidden">
+        <span className="block font-mono text-[0.65rem] tracking-widest text-tinta-suave uppercase anima:animate-pulse">
           Desliza
         </span>
       </span>

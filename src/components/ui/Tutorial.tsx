@@ -1,5 +1,6 @@
 import { useEffect, useState, type MouseEvent } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useAnimacionesSimples } from '../../hooks/useAnimacionesSimples'
 import { hayTutorial, terminarTutorial } from '../../lib/bienvenida'
 import { EASE_SALIDA } from '../../lib/movimiento'
 import { sonar } from '../../lib/sonido'
@@ -43,9 +44,9 @@ const PASOS: Paso[] = [
     marca: 'logo',
     titulo: 'El logo es el menú',
     texto:
-      'Puerta derecha: Ajustes, donde conectas el aula virtual y Mis Aulas y apuntas lo de Teams. Central: tu cuenta. Izquierda: la web del instituto. ¿Dudas? Deja el ratón sobre el título de cualquier celda.',
+      'Puerta derecha: Ajustes, donde conectas el aula virtual y Mis Aulas y apuntas lo de Teams. Central: tu cuenta. Izquierda: el repositorio en GitHub, con el código de la web. ¿Dudas? Deja el ratón sobre el título de cualquier celda.',
     textoMovil:
-      'Puerta derecha: Ajustes, donde conectas el aula virtual y Mis Aulas y apuntas lo de Teams. Central: tu cuenta. Izquierda: la web del instituto.',
+      'Puerta derecha: Ajustes, donde conectas el aula virtual y Mis Aulas y apuntas lo de Teams. Central: tu cuenta. Izquierda: el repositorio en GitHub, con el código de la web.',
   },
 ]
 
@@ -69,7 +70,7 @@ export function Tutorial() {
   const [activo, setActivo] = useState(hayTutorial)
   const [i, setI] = useState(0)
   const [caja, setCaja] = useState<Caja | null>(null)
-  const reducido = useReducedMotion()
+  const reducido = useAnimacionesSimples()
   const paso = PASOS[i]
   const ultimo = i === PASOS.length - 1
 

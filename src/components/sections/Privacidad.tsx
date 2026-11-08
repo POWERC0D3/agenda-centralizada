@@ -141,7 +141,8 @@ export function Privacidad() {
         <p>Puedes acceder a tus datos, corregirlos, borrarlos, oponerte a su tratamiento, limitarlo y llevártelos.</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <strong>Borrar tu cuenta y todos tus datos:</strong> Ajustes → Tu cuenta → Borrar mi cuenta. Es inmediato.
+            <strong>Borrar tu cuenta y todos tus datos:</strong> con la sesión iniciada, en la tarjeta de acceso de la página
+            principal → Eliminar cuenta (te pedirá la contraseña). Es inmediato.
           </li>
           <li>
             <strong>Desconectar Moodle:</strong> Ajustes → Sincronizar → Desconectar. También puedes revocar la clave en Moodle →
